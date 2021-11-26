@@ -1,10 +1,9 @@
 # Info and Notes on DS UE Assignment 1
 
-## Architecture considerations
-### Concurrency and Sync
+## Concurrency and Syncchronization "Architecture"
 TransferServer:
 - 1 AcceptThread
-  - n DMTP-Receive-Threads 
+  - n DMTP-Receive-Threads
 - 1 BlockingQueue
 - m TransferThreads
 - 1 Shell
