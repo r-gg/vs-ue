@@ -1,6 +1,6 @@
 # Info and Notes on DS UE Assignment 1
 
-## Concurrency and Syncchronization "Architecture"
+## Concurrency and Synchronization "Architecture"
 TransferServer:
 - 1 AcceptThread
   - n DMTP-Receive-Threads
