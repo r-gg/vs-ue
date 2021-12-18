@@ -23,13 +23,16 @@ public class AcceptThread implements Runnable {
   private final Map<String, Pair<String, Inbox>> user_db;
   private final ThreadFactory thread_maker;
   private final String domain;
+  private final String componentId;
 
   public AcceptThread(
+          String componentId,
       String domain,
       int port,
       AtomicBoolean si,
       Map<String, Pair<String, Inbox>> user_db,
       ThreadFactory thread_maker) {
+    this.componentId = componentId;
     this.domain = domain;
     this.shutdown_initiated = si;
     this.user_db = user_db;
@@ -68,7 +71,7 @@ public class AcceptThread implements Runnable {
         throw new UncheckedIOException(
             "Error during serverSocket.accept()-call\n" + e.getMessage(), e);
       }
-      thread_pool.execute(thread_maker.newThread(domain, shutdown_initiated, incomingConn, user_db));
+      thread_pool.execute(thread_maker.newThread(componentId, domain, shutdown_initiated, incomingConn, user_db));
     }
 
     // shutdown_initiated -> shutdown everything down!

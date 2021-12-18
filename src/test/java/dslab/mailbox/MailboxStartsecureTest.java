@@ -2,6 +2,7 @@ package dslab.mailbox;
 
 import static dslab.StringMatches.matchesPattern;
 
+import dslab.util.Keys;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -15,10 +16,16 @@ import dslab.Sockets;
 import dslab.TestBase;
 import dslab.util.Config;
 
+import javax.crypto.Cipher;
+import java.io.File;
+import java.security.PrivateKey;
+import java.util.Base64;
+
 public class MailboxStartsecureTest extends TestBase {
 
     private static final Log LOG = LogFactory.getLog(MailboxServerProtocolTest.class);
 
+    private static final String ALGORITHM_RSA = "RSA";
 
     private int dmapServerPort;
     private int dmtpServerPort;
@@ -53,12 +60,21 @@ public class MailboxStartsecureTest extends TestBase {
                 "PG+3t18C4ZR1jo50VZhAa9Kfqeuj787llQTZMMv+2gEIRciKPu8pF5/57+hmOmcp+mAoBaK0XdjTZ1Win4bF1CP44sdHLgKy2Bfv" +
                 "Gn69RN7ThWBEu8fXuBsxcflhLDus1OIlDv8YgoLVGiOCamtZf0TtqcErg==";
 
+        byte[] dec = Base64.getDecoder().decode(testChallenge);
+        PrivateKey pk = Keys.readPrivateKey(new File("keys/server/mailbox-earth-planet.der"));
+        Cipher cipher = Cipher.getInstance(ALGORITHM_RSA);
+        cipher.init(Cipher.DECRYPT_MODE, pk);
+
+        String decr = new String(cipher.doFinal(dec));
+
+
         try (JunitSocketClient client = new JunitSocketClient(dmapServerPort, err)) {
             // protocol check
             client.verify("ok DMAP2.0");
 
             // check that mailbox returns its component id
             client.sendAndVerify("startsecure", "ok mailbox-earth-planet");
+
 
             // send the challenge + aes init
             client.send(testChallenge);

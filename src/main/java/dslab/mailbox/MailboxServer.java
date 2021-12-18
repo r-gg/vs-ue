@@ -41,6 +41,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
   private final int DMTP_port;
   private final int DMAP_port;
   private final String domain;
+  private final String componentId;
 
   /**
    * Creates a new server instance.
@@ -51,6 +52,8 @@ public class MailboxServer implements IMailboxServer, Runnable {
    * @param out the output stream to write console output to
    */
   public MailboxServer(String componentId, Config component_config, Config user_cred_config, InputStream in, PrintStream out) {
+
+    this.componentId = componentId;
     DMTP_port = component_config.getInt("dmtp.tcp.port");
     DMAP_port = component_config.getInt("dmap.tcp.port");
 
@@ -71,8 +74,8 @@ public class MailboxServer implements IMailboxServer, Runnable {
   @Override
   public void run() {
     // Spawning the 2 AcceptThreads
-    exec.execute(new AcceptThread(domain, DMTP_port, shutdown_initiated, user_db, new DMTP_ThreadFactory()));
-    exec.execute(new AcceptThread(domain, DMAP_port, shutdown_initiated, user_db, new DMAP_ThreadFactory()));
+    exec.execute(new AcceptThread(componentId, domain, DMTP_port, shutdown_initiated, user_db, new DMTP_ThreadFactory()));
+    exec.execute(new AcceptThread(componentId,domain, DMAP_port, shutdown_initiated, user_db, new DMAP_ThreadFactory()));
     // ... and the Shell
     exec.execute(shell); // pdf mentions shell blocking may not be bad...
 

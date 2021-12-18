@@ -16,9 +16,12 @@ import dslab.util.Pair;
 import static dslab.util.DMTP_Utils.*;
 
 public class DMAP_Thread extends MB_Thread {
-  public DMAP_Thread(String domain, AtomicBoolean shutdown_initiated, Socket incomingConn, Map<String, Pair<String, Inbox>> user_db) {
-    super(domain, shutdown_initiated, incomingConn, user_db);
+  public DMAP_Thread(String componentId, String domain, AtomicBoolean shutdown_initiated, Socket incomingConn, Map<String, Pair<String, Inbox>> user_db) {
+    super(componentId,domain, shutdown_initiated, incomingConn, user_db);
   }
+
+  private String componentId;
+  private boolean secure_started = false;
 
   @Override
   public void run() {
@@ -38,6 +41,9 @@ public class DMAP_Thread extends MB_Thread {
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
 
+        // TODO: if secure is off, continue
+        // TODO: if secure, decode first then decrypt, only then continue
+
         var parsed = split_cmd_cntnt(inc_line);
         if (parsed.isEmpty()) {
           protocol_error(writer);
@@ -45,7 +51,7 @@ public class DMAP_Thread extends MB_Thread {
         }
 
         try {
-          logged_in_inbox = handle_line(writer, logged_in_inbox, parsed.get().left, parsed.get().right);
+          logged_in_inbox = handle_line(writer, logged_in_inbox, parsed.get().left, parsed.get().right, reader);
         } catch (ConnectionEnd e) {
           // the connection ended according to the protocol.
           // therefore, break out of the read-loop
@@ -73,18 +79,25 @@ public class DMAP_Thread extends MB_Thread {
     }
   }
 
+  private void handshake(PrintWriter writer, BufferedReader reader){
+
+
+  }
+
   /**
    *
    * @param them the handle (PrintWriter) via which msgs shall be sent
    * @param inbox pre: null exactly if no successful "login" yet, or if the user has logged out again.
    * @param command DMAP command as String. Anything apart from {login, list, show, delete, logout} leads to connection end, as does "quit"
    * @param content
+   * @param reader the handle (BufferedReader) where we receive messages
    * @return  null if no successful login yet, after logouts or bad initial logins
    *          new inbox after a good login
    *          passed-through inbox for "normal" commands when logged in already
    * @throws ConnectionEnd in all cases where the protocol demands it
    */
-  private Inbox handle_line(PrintWriter them, Inbox inbox, String command, Optional<String> content) throws ConnectionEnd {
+  private Inbox handle_line(PrintWriter them, Inbox inbox, String command,
+                            Optional<String> content, BufferedReader reader) throws ConnectionEnd {
     // TODO: allow secure-channel-init
     // if (command.equals("startsecure")) { <multi-message coordination> }
     // the "get line; parse line; inbox <- handle_line()" pattern surely needs to be adapted,
@@ -110,6 +123,9 @@ public class DMAP_Thread extends MB_Thread {
             }
           }
           break;
+        case "startsecure":
+          // TODO: initiate the handshake
+          return null;
         case "quit":
           ok(them, "bye");
           throw new ConnectionEnd();
@@ -165,6 +181,9 @@ public class DMAP_Thread extends MB_Thread {
         } else {
           error(them, "missing or invalid message id");
         }
+        return inbox;
+      case "startsecure":
+        // TODO: initiate the handshake
         return inbox;
       case "logout":
         ok(them);

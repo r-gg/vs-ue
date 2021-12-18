@@ -1,8 +1,5 @@
 package dslab;
 
-import java.io.InputStream;
-import java.io.PrintStream;
-
 import dslab.client.IMessageClient;
 import dslab.client.MessageClient;
 import dslab.mailbox.IMailboxServer;
@@ -14,6 +11,9 @@ import dslab.nameserver.Nameserver;
 import dslab.transfer.ITransferServer;
 import dslab.transfer.TransferServer;
 import dslab.util.Config;
+
+import java.io.InputStream;
+import java.io.PrintStream;
 
 /**
  * The component factory provides methods to create the core components of the application. You can
@@ -82,40 +82,39 @@ public final class ComponentFactory {
     return new TransferServer(componentId, self_config, maildomains_config, in, out);
   }
 
-    /**
-     * Creates a new {@link INameserver} instance.
-     *
-     * @param componentId the component id
-     * @param in the input stream used for accepting cli commands
-     * @param out the output stream to print to
-     * @return a new Nameserver instance
+  /**
+   * Creates a new {@link INameserver} instance.
+   *
+   * @param componentId the component id
+   * @param in the input stream used for accepting cli commands
+   * @param out the output stream to print to
+   * @return a new Nameserver instance
+   */
+  public static INameserver createNameserver(String componentId, InputStream in, PrintStream out)
+          throws Exception {
+    /*
+     * TODO: Here you can modify the code (if necessary) to instantiate your components
      */
-    public static INameserver createNameserver(String componentId, InputStream in, PrintStream out)
-            throws Exception {
-        /*
-         * TODO: Here you can modify the code (if necessary) to instantiate your components
-         */
 
-        Config config = new Config(componentId);
-        return new Nameserver(componentId, config, in, out);
-    }
+    Config config = new Config(componentId);
+    return new Nameserver(componentId, config, in, out);
+  }
 
-    /**
-     * Creates a new {@link IMessageClient} instance.
-     *
-     * @param componentId the component id
-     * @param in the input stream used for accepting cli commands
-     * @param out the output stream to print to
-     * @return a new MessageClient instance
+  /**
+   * Creates a new {@link IMessageClient} instance.
+   *
+   * @param componentId the component id
+   * @param in the input stream used for accepting cli commands
+   * @param out the output stream to print to
+   * @return a new MessageClient instance
+   */
+  public static IMessageClient createMessageClient(String componentId, InputStream in, PrintStream out)
+          throws Exception {
+    /*
+     * TODO: Here you can modify the code (if necessary) to instantiate your components
      */
-    public static IMessageClient createMessageClient(String componentId, InputStream in, PrintStream out)
-            throws Exception {
-        /*
-         * TODO: Here you can modify the code (if necessary) to instantiate your components
-         */
 
-        Config config = new Config(componentId);
-        return new MessageClient(componentId, config, in, out);
-    }
-
+    Config config = new Config(componentId);
+    return new MessageClient(componentId, config, in, out);
+  }
 }

@@ -17,8 +17,8 @@ import static dslab.util.DMTP_Utils.*;
 
 public class DMTP_Thread extends MB_Thread {
 
-  public DMTP_Thread(String domain, AtomicBoolean shutdown_initiated, Socket incomingConn, Map<String, Pair<String, Inbox>> user_db) {
-    super(domain, shutdown_initiated, incomingConn, user_db);
+  public DMTP_Thread(String componentId, String domain, AtomicBoolean shutdown_initiated, Socket incomingConn, Map<String, Pair<String, Inbox>> user_db) {
+    super(componentId, domain, shutdown_initiated, incomingConn, user_db);
   }
 
   @Override
