@@ -5,9 +5,16 @@ import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.*;
 
+import java.io.File;
+import java.security.Key;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
+import dslab.shared_models.DMTP_Message;
+import dslab.util.Keys;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -23,6 +30,8 @@ import dslab.Sockets;
 import dslab.TestInputStream;
 import dslab.TestOutputStream;
 import dslab.util.Config;
+
+import javax.crypto.Mac;
 
 /**
  * Starts a mailbox server and a message client, and injects mails to the mailbox server that are read by the mail
@@ -108,6 +117,23 @@ public class MessageClientMailboxTest {
 
     @Test(timeout = 40000)
     public void inbox_mulipleMails_showsAllInboxDataCorrectly() throws Exception {
+        String ALGORITHM = "HmacSHA256";
+        // Creating the hash:
+        Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
+        Mac hMac = Mac.getInstance(ALGORITHM);
+        hMac.init(secretKey);
+        DMTP_Message message = new DMTP_Message();
+        message.sender = "arthur@earth.planet";
+        message.recipients = new ArrayList<>(){{
+            add("trillian@earth.planet");
+        }};
+        message.subject = "somesubject";
+        message.text_body = "somedata";
+        hMac.update(message.getJoined().getBytes());
+        byte[] hash = hMac.doFinal();
+        String enc_hash = Base64.getEncoder().encodeToString(hash);
+        assertEquals("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk=", enc_hash);
+
 
         // send a mail to trillian
         try (JunitSocketClient client = new JunitSocketClient(mailboxConfig.getInt("dmtp.tcp.port"), err)) {

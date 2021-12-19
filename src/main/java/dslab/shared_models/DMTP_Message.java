@@ -8,6 +8,7 @@ public class DMTP_Message {
   public String sender;
   public String subject;
   public String text_body;
+  public String hash;
 
   /**
    *  simple DMTP_Message validation
@@ -30,5 +31,10 @@ public class DMTP_Message {
       probs.add("no data");
     }
     return probs;
+  }
+
+  public String getJoined(){
+    String recipients_str = this.recipients.toString().replace("[","").replace("]","");
+    return String.join("\n", this.sender, recipients_str, this.subject, this.text_body);
   }
 }

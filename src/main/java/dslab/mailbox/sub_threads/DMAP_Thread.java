@@ -3,6 +3,9 @@ package dslab.mailbox.sub_threads;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -11,7 +14,10 @@ import dslab.mailbox.models.MB_Thread;
 import dslab.shared_models.ConnectionEnd;
 import dslab.shared_models.DMTP_Message;
 import dslab.util.InputChecker;
+import dslab.util.Keys;
 import dslab.util.Pair;
+
+import javax.crypto.*;
 
 import static dslab.util.DMTP_Utils.*;
 
@@ -22,15 +28,34 @@ public class DMAP_Thread extends MB_Thread {
 
   private String componentId;
   private boolean secure_started = false;
+  private final String ALGORITHM_RSA = "RSA";
+  private final String ALGORITHM_AES = "AES";
+  PrivateKey pk;
+  Cipher rsa_dec_cipher;
 
   @Override
   public void run() {
+
+
     try ( // prepare the input reader for the socket
           BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
           // prepare the writer for responding to clients requests
           PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
       Inbox logged_in_inbox = null;
       String inc_line;
+
+      // Initialize the private key and the cipher
+      pk = Keys.readPrivateKey(new File("keys/server/mailbox-earth-planet.der"));
+      try{
+        rsa_dec_cipher = Cipher.getInstance(ALGORITHM_RSA);
+        rsa_dec_cipher.init(Cipher.DECRYPT_MODE, pk);
+      }catch(NoSuchAlgorithmException | NoSuchPaddingException e){
+        System.err.println("No Such Algorithm or padding in DMAP, failed to create the cipher");
+      } catch (InvalidKeyException e){
+        System.err.println("Sorry the key is invalid, could not initialize the cipher");
+      }
+
+
 
       if (shutdown_initiated.get()) {
         return;
@@ -79,7 +104,26 @@ public class DMAP_Thread extends MB_Thread {
     }
   }
 
-  private void handshake(PrintWriter writer, BufferedReader reader){
+  private void handshake(PrintWriter writer, BufferedReader reader) throws IOException, ConnectionEnd{
+    ok(writer, componentId);
+
+    String inc_line;
+
+    try {
+      if(!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
+        byte[] decoded = Base64.getDecoder().decode(inc_line);
+        String decrypted = new String(rsa_dec_cipher.doFinal(decoded));
+      }
+
+      if(!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
+
+      }
+
+
+    } catch (BadPaddingException | IllegalBlockSizeException e){
+      System.err.println("Bad padding or illegal block size in decrpytion");
+      throw new ConnectionEnd();
+    }
 
 
   }
@@ -97,12 +141,7 @@ public class DMAP_Thread extends MB_Thread {
    * @throws ConnectionEnd in all cases where the protocol demands it
    */
   private Inbox handle_line(PrintWriter them, Inbox inbox, String command,
-                            Optional<String> content, BufferedReader reader) throws ConnectionEnd {
-    // TODO: allow secure-channel-init
-    // if (command.equals("startsecure")) { <multi-message coordination> }
-    // the "get line; parse line; inbox <- handle_line()" pattern surely needs to be adapted,
-    // as the parsing of command+content needs additional info under the secure channel
-
+                            Optional<String> content, BufferedReader reader) throws ConnectionEnd, IOException {
     if (inbox == null) {
       switch (command) {
         case "login":
@@ -124,6 +163,12 @@ public class DMAP_Thread extends MB_Thread {
           }
           break;
         case "startsecure":
+          if(secure_started){
+            protocol_error(them);
+            throw new ConnectionEnd();
+          }else {
+            handshake(them, reader);
+          }
           // TODO: initiate the handshake
           return null;
         case "quit":
@@ -183,6 +228,12 @@ public class DMAP_Thread extends MB_Thread {
         }
         return inbox;
       case "startsecure":
+        if(secure_started){
+          protocol_error(them);
+          throw new ConnectionEnd();
+        }else {
+          handshake(them, reader);
+        }
         // TODO: initiate the handshake
         return inbox;
       case "logout":

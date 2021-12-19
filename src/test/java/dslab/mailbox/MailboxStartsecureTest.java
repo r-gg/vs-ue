@@ -17,15 +17,22 @@ import dslab.TestBase;
 import dslab.util.Config;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
-import java.security.PrivateKey;
+import java.security.*;
+import java.security.spec.KeySpec;
 import java.util.Base64;
+import static org.junit.Assert.*;
 
 public class MailboxStartsecureTest extends TestBase {
 
     private static final Log LOG = LogFactory.getLog(MailboxServerProtocolTest.class);
 
-    private static final String ALGORITHM_RSA = "RSA";
+    private static final String ALGORITHM_RSA = "RSA/ECB/PKCS1Padding";
 
     private int dmapServerPort;
     private int dmtpServerPort;
@@ -54,6 +61,32 @@ public class MailboxStartsecureTest extends TestBase {
     @Test(timeout = 15000)
     public void sendStartsecure() throws Exception {
 
+        KeyGenerator generator = KeyGenerator.getInstance("AES");
+        generator.init(256);
+        SecretKey custom_aes_key = generator.generateKey();
+
+        SecureRandom secureRandom = new SecureRandom();
+        final byte[] custom_iv_bytes = new byte[16];
+        secureRandom.nextBytes(custom_iv_bytes);
+
+        IvParameterSpec custom_iv = new IvParameterSpec(custom_iv_bytes);
+
+        Cipher custom_rsa_cipher = Cipher.getInstance(ALGORITHM_RSA);
+        PublicKey publicKey = Keys.readPublicKey(new File("keys/client/mailbox-earth-planet_pub.der"));
+        custom_rsa_cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+
+        Cipher custom_aes_enc = Cipher.getInstance("AES/CTR/NoPadding");
+        custom_aes_enc.init(Cipher.ENCRYPT_MODE, custom_aes_key, custom_iv);
+
+        Cipher custom_aes_dec = Cipher.getInstance("AES/CTR/NoPadding");
+        custom_aes_dec.init(Cipher.DECRYPT_MODE, custom_aes_key, custom_iv);
+
+        String req_plain = "ok " + "challlenge " + Base64.getEncoder().encodeToString(custom_aes_key.getEncoded()) + " "+
+                Base64.getEncoder().encodeToString(custom_iv_bytes);
+
+        byte[] encrypted = custom_rsa_cipher.doFinal(req_plain.getBytes());
+        String encoded = Base64.getEncoder().encodeToString(encrypted);
+        //String testChallenge = encoded;
         // a challenge, aes secret and iv param encrypted with the server's RSA key
         String testChallenge = "wTZqUdwD6RIWtgTrvoYecJgulKRQVActTzbaW7u4i0puTak8ymlUHmvVQGT6wCUVoByDaF3dEhRFku5uC4kap" +
                 "9yd2FntrtIcuftaf36WSU/Qg2ue254TiEVmCLILd2eef8SxHh6U0hyWwXPdD+BHBplzrBeIIiTPqLteKKHl6veEzuEh+s/u66hcy" +
@@ -66,7 +99,46 @@ public class MailboxStartsecureTest extends TestBase {
         cipher.init(Cipher.DECRYPT_MODE, pk);
 
         String decr = new String(cipher.doFinal(dec));
+        String[] splitted_arr = decr.trim().split(" ");
+        assertEquals(4, splitted_arr.length);
 
+        String challenge_enc = splitted_arr[1];
+
+        // AES Key
+        String secretAesKey_enc = splitted_arr[2];
+        byte[] secret_AES_key = Base64.getDecoder().decode(secretAesKey_enc);
+        SecretKey aes_key = new SecretKeySpec(secret_AES_key, "AES");
+
+        // IV
+        String init_vector_enc = splitted_arr[3];
+        byte[] init_vector = Base64.getDecoder().decode(init_vector_enc);
+        IvParameterSpec iv = new IvParameterSpec(init_vector);
+
+        // AES Ciphers
+        //  Encrypt
+        Cipher cipher_aes_encrypt = Cipher.getInstance("AES/CTR/NoPadding");
+        cipher_aes_encrypt.init(Cipher.ENCRYPT_MODE, aes_key, iv);
+        //  Decrypt
+        Cipher cipher_aes_decrypt = Cipher.getInstance("AES/CTR/NoPadding");
+        cipher_aes_decrypt.init(Cipher.DECRYPT_MODE, aes_key, iv);
+
+        // RESPONSE
+        String response_plain = "ok "+ challenge_enc;
+        byte[] response_encrypted = cipher_aes_encrypt.doFinal(response_plain.getBytes());
+        String response_encoded = Base64.getEncoder().encodeToString(response_encrypted);
+
+        assertEquals("g9UJxNFULO+H0otZoH5AVXoHv9TxJUEcbY/ScWoWMvcJYLz2lYBaZ16OtqEKtVk=", response_encoded);
+
+        //String response_decrypted = new String(custom_aes_dec.doFinal(response_encrypted));
+        //assertEquals("ok challlenge", response_decrypted);
+
+
+
+        byte[] decoded_ok = Base64.getDecoder().decode("g9U=");
+        byte[] decryptedOk = cipher_aes_decrypt.doFinal(decoded_ok);
+
+        String ok_str = new String(decryptedOk);
+        assertEquals("ok",ok_str);
 
         try (JunitSocketClient client = new JunitSocketClient(dmapServerPort, err)) {
             // protocol check
