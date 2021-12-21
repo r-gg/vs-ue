@@ -22,7 +22,13 @@ public class MessageClient implements IMessageClient, Runnable {
      * @param out the output stream to write console output to
      */
     public MessageClient(String componentId, Config config, InputStream in, PrintStream out) {
-        // TODO: init inbox / login state (?)
+        /*
+        TODO: init client, in particular:
+        read username, password, email address,
+        transfer server + mailbox server details from properties file(s?)
+
+        ? init inbox / login state
+        */
     }
 
     @Override
