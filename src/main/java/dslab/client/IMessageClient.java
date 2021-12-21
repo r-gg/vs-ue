@@ -14,7 +14,8 @@ public interface IMessageClient extends Runnable {
     void run();
 
     /**
-     * Outputs the contents of the user's inbox on the shell.
+     * Outputs the contents of the user's inbox on the shell,
+     * including p. much everything (ids, sender, recipients, subjects and message data)
      */
     void inbox();
 
