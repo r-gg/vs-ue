@@ -6,6 +6,11 @@ import java.io.PrintStream;
 import dslab.ComponentFactory;
 import dslab.util.Config;
 
+// TODO:
+// check if compile-/runnable
+// check if commands work
+// check how command-arguments work (/are seperated)
+
 public class MessageClient implements IMessageClient, Runnable {
 
     /**
@@ -17,37 +22,42 @@ public class MessageClient implements IMessageClient, Runnable {
      * @param out the output stream to write console output to
      */
     public MessageClient(String componentId, Config config, InputStream in, PrintStream out) {
-
+        // TODO: init inbox / login state (?)
     }
 
     @Override
     public void run() {
-
     }
 
     @Override
+    @Command
     public void inbox() {
-
+        // TODO
     }
 
     @Override
+    @Command
     public void delete(String id) {
-
+        // TODO
     }
 
     @Override
+    @Command
     public void verify(String id) {
-
+        // TODO
     }
 
     @Override
+    @Command
     public void msg(String to, String subject, String data) {
+        // TODO
 
     }
 
     @Override
+    @Command
     public void shutdown() {
-
+        // TODO
     }
 
     public static void main(String[] args) throws Exception {

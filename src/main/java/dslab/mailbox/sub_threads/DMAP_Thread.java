@@ -85,6 +85,11 @@ public class DMAP_Thread extends MB_Thread {
    * @throws ConnectionEnd in all cases where the protocol demands it
    */
   private Inbox handle_line(PrintWriter them, Inbox inbox, String command, Optional<String> content) throws ConnectionEnd {
+    // TODO: allow secure-channel-init
+    // if (command.equals("startsecure")) { <multi-message coordination> }
+    // the "get line; parse line; inbox <- handle_line()" pattern surely needs to be adapted,
+    // as the parsing of command+content needs additional info under the secure channel
+
     if (inbox == null) {
       switch (command) {
         case "login":
