@@ -36,7 +36,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
         read in "hmac.key" (the shared secret) from /keys/
         using the Keys class
-        ? where tf are the supposed shared keys of "friends" for verifying ?
+        "hmac.key" stands in for _every_ sender+recipient key-pair
         */
     }
 
@@ -66,7 +66,26 @@ public class MessageClient implements IMessageClient, Runnable {
     @Override
     @Command
     public void verify(String id) {
-        // TODO
+        /*
+        TODO
+        Check Handbook/Tips & Tricks chapter for useful code snippets.
+        Create a javax.crypto.Mac instance using the HmacSHA256 algorithm,
+        initialize it with the shared secret key.
+        
+        prepare message-string for hashing (bytes_to_hash)
+        DMTP_to_bytes()
+            Format:
+            The _contents_ of the fields, separated by newlines,
+            in the order: from to subject data
+            String msg = String.join("\n", from, to, subject, data)
+
+            convert to bytes
+        
+        using Mac instance, calc 32-byte hash of bytes_to_hash
+
+        use Base64 binary-to-text to get plaintext hash
+        attach to 'hash' field
+        */ 
     }
 
     @Override
