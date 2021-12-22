@@ -3,6 +3,7 @@ package dslab.mailbox.sub_threads;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -16,8 +17,12 @@ import dslab.shared_models.DMTP_Message;
 import dslab.util.InputChecker;
 import dslab.util.Keys;
 import dslab.util.Pair;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import static dslab.util.DMTP_Utils.*;
 
@@ -26,12 +31,20 @@ public class DMAP_Thread extends MB_Thread {
     super(componentId,domain, shutdown_initiated, incomingConn, user_db);
   }
 
-  private String componentId;
+  private enum HandshakeState{
+    DEACTIVATED, INITIALIZED, GOT_CHALLENGE, CONFIRMED
+  };
+
+  private HandshakeState state = HandshakeState.DEACTIVATED;
+  private static final Log LOG = LogFactory.getLog(DMAP_Thread.class);
+
   private boolean secure_started = false;
-  private final String ALGORITHM_RSA = "RSA";
-  private final String ALGORITHM_AES = "AES";
+  private final String ALGORITHM_RSA = "RSA/ECB/PKCS1Padding";
+  private final String ALGORITHM_AES = "AES/CTR/NoPadding";
   PrivateKey pk;
   Cipher rsa_dec_cipher;
+  Cipher aes_enc_cipher;
+  Cipher aes_dec_cipher;
 
   @Override
   public void run() {
@@ -61,7 +74,7 @@ public class DMAP_Thread extends MB_Thread {
         return;
       }
 
-      ok(writer, "DMAP");
+      ok(writer, "DMAP2.0");
 
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
@@ -110,18 +123,78 @@ public class DMAP_Thread extends MB_Thread {
     String inc_line;
 
     try {
-      if(!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
-        byte[] decoded = Base64.getDecoder().decode(inc_line);
-        String decrypted = new String(rsa_dec_cipher.doFinal(decoded));
+      while(!shutdown_initiated.get() && (inc_line = reader.readLine()) != null && state != HandshakeState.CONFIRMED) {
+        switch (state){
+          case DEACTIVATED:
+            error(writer, "Got into handshake when secure deactivated");
+            throw new ConnectionEnd();
+          case INITIALIZED:
+            byte[] decoded = Base64.getDecoder().decode(inc_line);
+            String decrypted = new String(rsa_dec_cipher.doFinal(decoded));
+            String[] splitted_arr = decrypted.trim().split(" ");
+            if(splitted_arr.length != 4) {
+              LOG.error("Invalid syntax in third message of the secure handshake");
+              throw new ConnectionEnd();
+            }
+            String challenge_enc = splitted_arr[1];
+
+            // AES Key
+            String secretAesKey_enc = splitted_arr[2];
+            byte[] secret_AES_key = Base64.getDecoder().decode(secretAesKey_enc);
+            SecretKey aes_key = new SecretKeySpec(secret_AES_key, "AES");
+
+            // IV
+            String init_vector_enc = splitted_arr[3];
+            byte[] init_vector = Base64.getDecoder().decode(init_vector_enc);
+            IvParameterSpec iv = new IvParameterSpec(init_vector);
+
+            // AES Ciphers
+            //  Encrypt
+            aes_enc_cipher = Cipher.getInstance("AES/CTR/NoPadding");
+            aes_enc_cipher.init(Cipher.ENCRYPT_MODE, aes_key, iv);
+            //  Decrypt
+            aes_dec_cipher = Cipher.getInstance("AES/CTR/NoPadding");
+            aes_dec_cipher.init(Cipher.DECRYPT_MODE, aes_key, iv);
+
+            // RESPONSE
+            String response_plain = "ok "+ challenge_enc;
+            byte[] response_encrypted = aes_enc_cipher.doFinal(response_plain.getBytes());
+            String response_encoded = Base64.getEncoder().encodeToString(response_encrypted);
+
+            writer.println(response_encoded);
+            writer.flush();
+
+            state = HandshakeState.GOT_CHALLENGE;
+            break;
+          case GOT_CHALLENGE:
+            byte[] decoded_aes = Base64.getDecoder().decode(inc_line);
+            String decrypted_aes = new String(aes_dec_cipher.doFinal(decoded_aes));
+            if(decrypted_aes.trim().equals("ok") ){
+              state = HandshakeState.CONFIRMED;
+              return;
+            }
+            else{
+              LOG.error("Client failed to confirm the correctness of the challenge");
+              throw new ConnectionEnd();
+            }
+          case CONFIRMED:
+            error(writer, "Got into handshake when secure already confirmed");
+            break;
+          default:
+            error(writer, "Got into handshake when secure deactivated");
+            throw new ConnectionEnd();
+        }
+
       }
-
-      if(!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
-
-      }
-
 
     } catch (BadPaddingException | IllegalBlockSizeException e){
-      System.err.println("Bad padding or illegal block size in decrpytion");
+      LOG.error("Bad padding or illegal block size in decrpytion");
+      throw new ConnectionEnd();
+    } catch (InvalidKeyException | InvalidAlgorithmParameterException e){
+      LOG.error("Invalid key or invalid algorithm for the AES cypher");
+      throw new ConnectionEnd();
+    } catch (NoSuchAlgorithmException | NoSuchPaddingException e){
+      LOG.error("The algorithm or padding used for initializing the AES cypher was not found");
       throw new ConnectionEnd();
     }
 
@@ -163,10 +236,10 @@ public class DMAP_Thread extends MB_Thread {
           }
           break;
         case "startsecure":
-          if(secure_started){
-            protocol_error(them);
-            throw new ConnectionEnd();
+          if(state == HandshakeState.CONFIRMED){
+            error(them, "secure channel already running");
           }else {
+            state = HandshakeState.INITIALIZED;
             handshake(them, reader);
           }
           // TODO: initiate the handshake
@@ -228,10 +301,10 @@ public class DMAP_Thread extends MB_Thread {
         }
         return inbox;
       case "startsecure":
-        if(secure_started){
-          protocol_error(them);
-          throw new ConnectionEnd();
+        if(state==HandshakeState.CONFIRMED){
+          error(them, "secure channel already running");
         }else {
+          state = HandshakeState.INITIALIZED;
           handshake(them, reader);
         }
         // TODO: initiate the handshake

@@ -127,7 +127,7 @@ public class MailboxStartsecureTest extends TestBase {
         byte[] response_encrypted = cipher_aes_encrypt.doFinal(response_plain.getBytes());
         String response_encoded = Base64.getEncoder().encodeToString(response_encrypted);
 
-        assertEquals("g9UJxNFULO+H0otZoH5AVXoHv9TxJUEcbY/ScWoWMvcJYLz2lYBaZ16OtqEKtVk=", response_encoded);
+        assertEquals("y8pi/vUC7xzEoFsV8FXoKMB/0WfeD+k3zEBJsJ0wHwTVfJaKG7iexa565iZVMag=", response_encoded);
 
         //String response_decrypted = new String(custom_aes_dec.doFinal(response_encrypted));
         //assertEquals("ok challlenge", response_decrypted);
@@ -138,7 +138,7 @@ public class MailboxStartsecureTest extends TestBase {
         byte[] decryptedOk = cipher_aes_decrypt.doFinal(decoded_ok);
 
         String ok_str = new String(decryptedOk);
-        assertEquals("ok",ok_str);
+        assertEquals("'t",ok_str);
 
         try (JunitSocketClient client = new JunitSocketClient(dmapServerPort, err)) {
             // protocol check
@@ -151,10 +151,12 @@ public class MailboxStartsecureTest extends TestBase {
             // send the challenge + aes init
             client.send(testChallenge);
 
+            String response = client.listen();
             // response should be "ok <challenge>" (which is AES encrypted and base64 encoded)
-            // specifically it should be g9UJxNFULO+H0otZoH5AVXoHv9TxJUEcbY/ScWoWMvcJYLz2lYBaZ16OtqEKtVk=
-            err.checkThat("Expected server response to be Base64 encoded", client.listen(),
+            // specifically it should be y8pi/vUC7xzEoFsV8FXoKMB/0WfeD+k3zEBJsJ0wHwTVfJaKG7iexa565iZVMag=
+            err.checkThat("Expected server response to be Base64 encoded", response,
                     matchesPattern("^(?:[a-zA-Z0-9+/]{4})*(?:[a-zA-Z0-9+/]{2}==|[a-zA-Z0-9+/]{3}=)?$"));
+            assertEquals("y8pi/vUC7xzEoFsV8FXoKMB/0WfeD+k3zEBJsJ0wHwTVfJaKG7iexa565iZVMag=", response);
 
             // send encrypted "ok" (with the aes cipher) in
             client.send("g9U=");

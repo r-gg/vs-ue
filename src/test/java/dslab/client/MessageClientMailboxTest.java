@@ -10,6 +10,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
@@ -134,7 +135,10 @@ public class MessageClientMailboxTest {
         String enc_hash = Base64.getEncoder().encodeToString(hash);
         assertEquals("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk=", enc_hash);
 
+        byte[] dec = Base64.getDecoder().decode("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk");
 
+        boolean does_equal = Arrays.equals(hash,dec);
+        
         // send a mail to trillian
         try (JunitSocketClient client = new JunitSocketClient(mailboxConfig.getInt("dmtp.tcp.port"), err)) {
             err.checkThat("Expected mailbox server to implement DMTP2.0", client.read(), is("ok DMTP2.0"));
