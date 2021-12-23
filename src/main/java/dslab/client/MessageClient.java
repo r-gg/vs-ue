@@ -1,11 +1,22 @@
 package dslab.client;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Base64;
 
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
+import dslab.shared_models.DMTP_Message;
 import dslab.util.Config;
+import dslab.util.Keys;
+
+import javax.crypto.Mac;
 
 // TODO:
 // check if compile-/runnable
@@ -14,6 +25,8 @@ import dslab.util.Config;
 
 public class MessageClient implements IMessageClient, Runnable {
 
+    private String HASH_ALGORITHM = "HmacSHA256";
+    private Mac hMac;
     /**
      * Creates a new client instance.
      *
@@ -35,10 +48,62 @@ public class MessageClient implements IMessageClient, Runnable {
 
         aaand
 
+        ----------- Done --------------
         read in "hmac.key" (the shared secret) from /keys/
         using the Keys class
         "hmac.key" stands in for _every_ sender+recipient key-pair
         */
+        try{
+            // Creating the hash:
+            Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
+            hMac = Mac.getInstance(HASH_ALGORITHM);
+            hMac.init(secretKey);
+        }catch (NoSuchAlgorithmException | InvalidKeyException | IOException e){
+            System.err.println("HMAC init failed");
+            // TODO: Gracefully shutdown
+        }
+    }
+
+    /**
+     * Returns the base64 encoded hash of the message
+     * @param message to be hashed
+     * @return b64 encoded hash of the message
+     */
+    private String calculateHash(DMTP_Message message){
+        hMac.update(message.getJoined().getBytes());
+        byte[] hash = hMac.doFinal();
+        return Base64.getEncoder().encodeToString(hash);
+    }
+
+    /**
+     * Returns the base64 encoded hash of the message
+     * @param message to be hashed, formatted as described in assignment sheet (Fields joined with '\n')
+     * @return b64 encoded hash of the message
+     */
+    private String calculateHash(String message){
+        hMac.update(message.getBytes());
+        byte[] hash = hMac.doFinal();
+        return Base64.getEncoder().encodeToString(hash);
+    }
+
+    /**
+     * Checks if the value of the hash matches the actual hash of the message
+     * @param message received message, to be checked
+     * @param hash received hash (b64 encoded), to be checked
+     * @return true if hash is correct, false otherwise
+     */
+    private boolean isHashCorrect(DMTP_Message message, String hash){
+        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
+    }
+
+    /**
+     * Checks if the value of the hash matches the actual hash of the message
+     * @param message received message, to be checked (fields joined with '\n')
+     * @param hash received hash (b64 encoded), to be checked
+     * @return true if hash is correct, false otherwise
+     */
+    private boolean isHashCorrect(String message, String hash){
+        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
     }
 
     @Override
@@ -46,6 +111,8 @@ public class MessageClient implements IMessageClient, Runnable {
         // TODO: connect to MB server (for reading own mailbox via DMAP),
         // "startsecure"
         // "login"
+
+
     }
 
     @Override
@@ -104,6 +171,8 @@ public class MessageClient implements IMessageClient, Runnable {
     public void shutdown() {
         // TODO
     }
+
+
 
     public static void main(String[] args) throws Exception {
         IMessageClient client = ComponentFactory.createMessageClient(args[0], System.in, System.out);

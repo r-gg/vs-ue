@@ -135,7 +135,7 @@ public class MessageClientMailboxTest {
         String enc_hash = Base64.getEncoder().encodeToString(hash);
         assertEquals("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk=", enc_hash);
 
-        byte[] dec = Base64.getDecoder().decode("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk");
+        byte[] dec = Base64.getDecoder().decode("98yUrgHu4BctmhAel19nUAhGRVdVh9qD7Ge3VJBiehk=");
 
         boolean does_equal = Arrays.equals(hash,dec);
         

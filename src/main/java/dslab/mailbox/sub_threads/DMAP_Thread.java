@@ -33,7 +33,10 @@ public class DMAP_Thread extends MB_Thread {
   }
 
   private enum HandshakeState{
-    DEACTIVATED, INITIALIZED, GOT_CHALLENGE, CONFIRMED
+    DEACTIVATED, // Default state, no secure communication, all messages in plaintext
+    INITIALIZED, // Handshake initialized with startsecure
+    GOT_CHALLENGE,  // Decrypted the challenge message
+    CONFIRMED // Secure channel activated, all messages encrypted and encoded
   };
 
   private HandshakeState state = HandshakeState.DEACTIVATED;
@@ -324,7 +327,8 @@ public class DMAP_Thread extends MB_Thread {
             String details = "from " + msg.sender + "\n"
                     + "to " + String.join(",", msg.recipients) + "\n"
                     + "subject " + msg.subject + "\n"
-                    + "data " + msg.text_body;
+                    + "data " + msg.text_body + "\n"
+                    + "hash " + ((msg.hash != null)? msg.hash : "");
             printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(details):details);
 //            them.println("from " + msg.sender);
 //            them.println("to " + String.join(",", msg.recipients));

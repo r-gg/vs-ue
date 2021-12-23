@@ -175,6 +175,19 @@ public class TransferThread implements Runnable {
         return Optional.of(server_protocol_error_string);
       }
 
+      // set mail's hash if hash is present
+      if(msg.hash != null) {
+        out.println("hash " + msg.hash);
+        server_line = in.readLine();
+        if (server_line == null) {
+          return Optional.of(connection_ended_string);
+        }
+        if (!"ok".equals(server_line)) {
+          return Optional.of(server_protocol_error_string);
+        }
+      }
+
+
       // finalizes mail and send it off
       out.println("send");
       server_line = in.readLine();

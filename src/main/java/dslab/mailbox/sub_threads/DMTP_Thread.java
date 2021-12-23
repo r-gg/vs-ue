@@ -171,6 +171,10 @@ public class DMTP_Thread extends MB_Thread {
         msg.text_body = content.orElse("");
         ok(them);
         break;
+      case "hash":
+        msg.hash = content.orElse("");
+        ok(them);
+        break;
       case "send":
         List<String> probs = DMTP_Message.collectProblems(msg);
         if (probs.size() == 0) {

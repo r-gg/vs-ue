@@ -173,7 +173,7 @@ public class SystemProtocolsTest extends TestBase {
         }
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 20000)
     @Name("Transferring the message to the mailbox server (one recipient)")
     @Description("Positive test: Message is visible in the mailbox of the recipient and the monitoring server sees the increase in traffic for the server and the sender.")
     public void onePositiveTransfer() throws Exception{
@@ -184,6 +184,7 @@ public class SystemProtocolsTest extends TestBase {
             client.sendAndVerify("to arthur@earth.planet", "ok 1");
             client.sendAndVerify("subject hello", "ok");
             client.sendAndVerify("data hello from junit", "ok");
+            client.sendAndVerify("hash 111111111111","ok");
             client.sendAndVerify("send", "ok");
             client.sendAndVerify("quit", "ok bye");
         }
@@ -192,12 +193,16 @@ public class SystemProtocolsTest extends TestBase {
 
         // list the message via DMAP list
         try (JunitSocketClient client = new JunitSocketClient(dmapServerPort, err)) {
-            client.verify("ok DMAP");
+            client.verify("ok DMAP2.0");
             client.sendAndVerify("login arthur 23456", "ok");
 
             client.send("list");
             String listResult = client.listen();
             err.checkThat(listResult, containsString("trillian@earth.planet hello"));
+
+            client.send("show 0");
+            String showResult = client.listen();
+            err.checkThat(showResult, containsString("hash 111111111111"));
 
             client.sendAndVerify("logout", "ok");
             client.sendAndVerify("quit", "ok bye");
@@ -488,6 +493,10 @@ public class SystemProtocolsTest extends TestBase {
 
             client.send("show "+index);
             String showResult = client.listen();
+
+            LOG.info("\n-------------------------------- SHOW RESULT -----------------------------------------\n"+showResult+
+                    "\n--------------------------------------------------------------------------------------");
+
             err.checkThat(showResult, containsString(expectedFormat));
 
             client.sendAndVerify("logout", "ok");
