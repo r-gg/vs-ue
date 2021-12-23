@@ -3,6 +3,7 @@ package dslab.client;
 import java.io.InputStream;
 import java.io.PrintStream;
 
+import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.util.Config;
 

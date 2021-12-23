@@ -3,6 +3,7 @@ package dslab.mailbox.sub_threads;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -79,8 +80,9 @@ public class DMAP_Thread extends MB_Thread {
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
 
-        // TODO: if secure is off, continue
-        // TODO: if secure, decode first then decrypt, only then continue
+        if(state == HandshakeState.CONFIRMED && aes_dec_cipher != null){
+          inc_line = decipher(inc_line);
+        }
 
         var parsed = split_cmd_cntnt(inc_line);
         if (parsed.isEmpty()) {
@@ -105,7 +107,11 @@ public class DMAP_Thread extends MB_Thread {
       // idk what could be wrong / how it would be handled...
       // ... but creating reader + writer may have something to do with it.
       throw new UncheckedIOException(e);
-    } finally {
+    } catch (IllegalBlockSizeException | BadPaddingException e){
+      LOG.error("Illegal block size or bad padding while enciphering or deciphering");
+
+    }
+    finally {
       if (socket != null && !socket.isClosed()) {
         try {
           socket.close();
@@ -196,9 +202,44 @@ public class DMAP_Thread extends MB_Thread {
     } catch (NoSuchAlgorithmException | NoSuchPaddingException e){
       LOG.error("The algorithm or padding used for initializing the AES cypher was not found");
       throw new ConnectionEnd();
+    } catch (IllegalArgumentException e){
+      LOG.error("Invalid agrument when decoding b64");
+      throw new ConnectionEnd();
     }
 
 
+  }
+
+  /**
+   * If secure channel has been confirmed, the method encrypts and encodes the message with the shared secret key and base64 encoding.
+   * The result of the method is the encrypted and encoded message which can be sent via the socket.
+   * @param message to be encryped and encoded
+   * @returns string with the encryped and then encoded message if the secure channel was started, otherwise null
+   */
+  private String encipher(String message) throws IllegalBlockSizeException, BadPaddingException{
+    if(state != HandshakeState.CONFIRMED || aes_enc_cipher == null){
+      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
+      return null;
+    }else {
+      byte[] encrypted = aes_enc_cipher.doFinal(message.getBytes());
+      return Base64.getEncoder().encodeToString(encrypted);
+    }
+  }
+
+  /**
+   * If secure channel has been confirmed, the method decodes and decrypts the message with the shared secret key and base64 encoding.
+   * The result of the method is the decoded and decrypted message which can be further interpreted by the server side protocol resolver.
+   * @param encoded message which is also encrypted
+   * @returns string with the plain text message if the secure channel was started, otherwise null
+   */
+  private String decipher(String encoded) throws IllegalBlockSizeException, BadPaddingException{
+    if(state != HandshakeState.CONFIRMED || aes_dec_cipher == null){
+      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
+      return null;
+    }else {
+      byte[] decoded = Base64.getDecoder().decode(encoded);
+      return new String(aes_dec_cipher.doFinal(decoded));
+    }
   }
 
   /**
@@ -214,12 +255,12 @@ public class DMAP_Thread extends MB_Thread {
    * @throws ConnectionEnd in all cases where the protocol demands it
    */
   private Inbox handle_line(PrintWriter them, Inbox inbox, String command,
-                            Optional<String> content, BufferedReader reader) throws ConnectionEnd, IOException {
+                            Optional<String> content, BufferedReader reader) throws ConnectionEnd, IOException, IllegalBlockSizeException, BadPaddingException{
     if (inbox == null) {
       switch (command) {
         case "login":
           if (content.isEmpty()) {
-            error(them, "credentials required");
+            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error credentials required") : "error credentials required");
           } else {
             String[] credentials = content.get().split("\\s", 2);
             var username = credentials[0];
@@ -227,34 +268,34 @@ public class DMAP_Thread extends MB_Thread {
             if (user_db.containsKey(username) && user_db.get(username).left.equals(password)){
               // successful login!
               inbox = user_db.get(username).right;
-              ok(them);
+              //ok(them);
+              printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
               return inbox;
             } else {
-              error(them, "bad credentials");
+              printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error bad credentials") : "error bad credentials");
               return null;
             }
           }
           break;
         case "startsecure":
           if(state == HandshakeState.CONFIRMED){
-            error(them, "secure channel already running");
+            printMsg(them, encipher("secure channel already running"));
           }else {
             state = HandshakeState.INITIALIZED;
             handshake(them, reader);
           }
-          // TODO: initiate the handshake
           return null;
         case "quit":
-          ok(them, "bye");
+          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok bye"):"ok bye");
           throw new ConnectionEnd();
         case "list":
         case "show":
         case "delete":
         case "logout":
-          error(them, "not logged in");
+          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error not logged in"):"error not logged in");
           return null;
         default:
-          protocol_error(them);
+          protocol_error(them); // TODO: encrypt as well?
           throw new ConnectionEnd();
       }
     }
@@ -262,13 +303,17 @@ public class DMAP_Thread extends MB_Thread {
     // assert: inbox != null
     switch (command) {
       case "login":
-        error(them, "already logged in, 'logout' to switch accounts");
+        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error already logged in, 'logout' to switch accounts"):"error already logged in, 'logout' to switch accounts" );
         return inbox;
       case "list":
         var mail_sigs = inbox.list_mails_sigs();
+        StringBuilder list = new StringBuilder();
         for(String sig : mail_sigs){
-          printMsg(them, sig);
+          list.append(sig + "\n");
         }
+        if(mail_sigs.size() != 0) list.deleteCharAt(list.length()-1); // Delete last newline
+        // Encrypthing the whole message
+        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(list.toString()):list.toString());
         return inbox;
       case "show":
         var id = try_parse_int(content);
@@ -276,47 +321,51 @@ public class DMAP_Thread extends MB_Thread {
           var mby_msg = inbox.get(id.getAsInt());
           if(mby_msg.isPresent()){
             var msg = mby_msg.get();
-            them.println("from " + msg.sender);
-            them.println("to " + String.join(",", msg.recipients));
-            them.println("subject " + msg.subject);
-            them.println("data " + msg.text_body);
-            them.flush();
+            String details = "from " + msg.sender + "\n"
+                    + "to " + String.join(",", msg.recipients) + "\n"
+                    + "subject " + msg.subject + "\n"
+                    + "data " + msg.text_body;
+            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(details):details);
+//            them.println("from " + msg.sender);
+//            them.println("to " + String.join(",", msg.recipients));
+//            them.println("subject " + msg.subject);
+//            them.println("data " + msg.text_body);
+            //them.flush();
           } else {
-            error(them, "unknown message id");
+            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error unknown message id"):"error unknown message id");
           }
         } else {
-          error(them, "missing or invalid message id");
+          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error missing or invalid message id"):"error missing or invalid message id");
         }
         return inbox;
       case "delete":
         id = try_parse_int(content); // test whether that doesn't crash ("var" keyword from other branch super dodgy)
         if(id.isPresent()){
           if(inbox.delete(id.getAsInt())){
-            ok(them);
+            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
           } else {
-            error(them, "unknown message id");
+            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error unknown message id"):"error unknown message id");
           }
         } else {
-          error(them, "missing or invalid message id");
+          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error missing or invalid message id"):"error missing or invalid message id");
         }
         return inbox;
       case "startsecure":
         if(state==HandshakeState.CONFIRMED){
-          error(them, "secure channel already running");
+          printMsg(them, encipher("error secure channel already running"));
         }else {
           state = HandshakeState.INITIALIZED;
           handshake(them, reader);
         }
-        // TODO: initiate the handshake
         return inbox;
       case "logout":
-        ok(them);
+        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
         return null;
       case "quit":
-        ok(them, "bye");
+        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok bye"):"ok bye");
         throw new ConnectionEnd();
       default:
-        protocol_error(them);
+        protocol_error(them); // TODO: Also encrypt?
         throw new ConnectionEnd();
     }
   }

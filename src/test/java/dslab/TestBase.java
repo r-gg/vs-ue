@@ -21,10 +21,41 @@ public class TestBase {
     protected TestInputStream in;
     protected TestOutputStream out;
 
+    protected TestInputStream monitorIn;
+    protected TestOutputStream monitorOut;
+
+
+    protected TestInputStream transferIn;
+    protected TestOutputStream transferOut;
+
+    protected TestInputStream transferIn2;
+    protected TestOutputStream transferOut2;
+
+    protected TestInputStream mailboxIn1;
+    protected TestOutputStream mailboxOut1;
+
+    protected TestInputStream mailboxIn2;
+    protected TestOutputStream mailboxOut2;
+
     @Before
     public void setUpBase() throws Exception {
         in = new TestInputStream();
         out = new TestOutputStream();
+
+        monitorIn = new TestInputStream();
+        monitorOut = new TestOutputStream();
+
+        transferIn = new TestInputStream();
+        transferOut = new TestOutputStream();
+
+        transferIn2 = new TestInputStream();
+        transferOut2 = new TestOutputStream();
+
+        mailboxIn1 = new TestInputStream();
+        mailboxOut1 = new TestOutputStream();
+
+        mailboxIn2 = new TestInputStream();
+        mailboxOut2 = new TestOutputStream();
     }
 
 }

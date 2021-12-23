@@ -41,6 +41,7 @@ public class MessageClientStartupTest {
         serverThread.start();
 
         Sockets.waitForSocket("localhost", port, Constants.COMPONENT_STARTUP_WAIT);
+        //Thread.sleep(100);
     }
 
     @After
