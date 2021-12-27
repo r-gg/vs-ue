@@ -315,8 +315,8 @@ public class DMAP_Thread extends MB_Thread {
         for(String sig : mail_sigs){
           list.append(sig + "\n");
         }
-        if(mail_sigs.size() != 0) list.deleteCharAt(list.length()-1); // Delete last newline
-        // Encrypthing the whole message
+        list.append("ok"); // DMAP2.0 change
+        // Encrypting the whole message
         printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(list.toString()):list.toString());
         return inbox;
       case "show":
