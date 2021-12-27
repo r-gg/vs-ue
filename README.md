@@ -32,12 +32,6 @@ Compile the project using the gradle wrapper:
 Compile and run the tests:
 ```./gradlew build```
 
-NB: Opening the project in IntelliJ changed line 75 in 'gradlew' from
-```MINGW* )```
-to
-```MSYS* | MINGW* )```
-I hope that doesn't kill things
-
 ### Run the applications
 The gradle config contains several tasks that start application components for you.
 You can list them with
