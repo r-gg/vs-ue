@@ -1,5 +1,7 @@
 package dslab.transfer.models;
 
+import dslab.shared_models.Addr_InfoI;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 

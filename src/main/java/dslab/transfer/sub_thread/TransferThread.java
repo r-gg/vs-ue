@@ -1,6 +1,6 @@
 package dslab.transfer.sub_thread;
 
-import dslab.transfer.models.Addr_Info;
+import dslab.shared_models.Addr_Info;
 import dslab.shared_models.DMTP_Message;
 import dslab.transfer.models.Self_Info;
 import dslab.util.Tripple;
