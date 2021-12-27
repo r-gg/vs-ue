@@ -19,7 +19,6 @@ import dslab.util.Keys;
 import javax.crypto.Mac;
 
 // TODO:
-// check if compile-/runnable
 // check if commands work
 // check how command-arguments work (/are seperated)
 
@@ -45,20 +44,16 @@ public class MessageClient implements IMessageClient, Runnable {
         mailbox.port: the port of the default mailbox server
         mailbox.user: the mailbox server login username
         mailbox.password: the mailbox server login password
-
-        aaand
-
-        ----------- Done --------------
-        read in "hmac.key" (the shared secret) from /keys/
-        using the Keys class
-        "hmac.key" stands in for _every_ sender+recipient key-pair
         */
-        try{
+
+        // read in "hmac.key" (the shared secret) from /keys/
+        // this (single) hmac.key is a stand-in for all shared secrets between any sender+recipient pair
+        try {
             // Creating the hash:
             Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
             hMac = Mac.getInstance(HASH_ALGORITHM);
             hMac.init(secretKey);
-        }catch (NoSuchAlgorithmException | InvalidKeyException | IOException e){
+        } catch (NoSuchAlgorithmException | InvalidKeyException | IOException e){
             System.err.println("HMAC init failed");
             // TODO: Gracefully shutdown
         }
@@ -142,10 +137,6 @@ public class MessageClient implements IMessageClient, Runnable {
         
         prepare message-string for hashing (bytes_to_hash)
         DMTP_to_bytes()
-            Format:
-            The _contents_ of the fields, separated by newlines,
-            in the order: from to subject data
-            String msg = String.join("\n", from, to, subject, data)
 
             convert to bytes
         
@@ -153,7 +144,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
         use Base64 binary-to-text to get plaintext hash
         attach to 'hash' field
-        */ 
+        */
     }
 
     @Override

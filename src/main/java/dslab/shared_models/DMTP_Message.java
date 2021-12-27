@@ -33,6 +33,12 @@ public class DMTP_Message {
     return probs;
   }
 
+  /**
+   * returns a "canonical" string representation of the Message (for Hashing purposes):
+   * The _contents_ of the fields
+   * in the order: from, to, subject, data
+   * separated by newlines
+   */
   public String getJoined(){
     String recipients_str = this.recipients.toString().replace("[","").replace("]","");
     return String.join("\n", this.sender, recipients_str, this.subject, this.text_body);
