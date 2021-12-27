@@ -1,9 +1,7 @@
 package dslab.client;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
+import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -22,17 +20,26 @@ import dslab.util.Keys;
 
 import javax.crypto.Mac;
 
-// TODO:
-// check if commands work
-// check how command-arguments work (/are seperated)
-
 public class MessageClient implements IMessageClient, Runnable {
 
     private final Shell shell;
     private String HASH_ALGORITHM = "HmacSHA256";
-    private Mac hMac;
+    private Mac hMac; // gets initiated with the secret key in constructor.
+    //  that (single) key is a stand-in for all shared secrets between any sender+recipient pair
+
+    // IP + Port for default servers
+    private Addr_Info transfer_addr;
+    private Addr_Info mailbox_addr;
+    // the user mail address
+    private String own_mail_addr;
+    // the login credentials for the mailbox server
+    private String mailbox_username;
+    private String mailbox_password;
+
     /**
-     * Creates a new client instance.
+     * Creates a new client instance,
+     * reads in config infos from the client-*.properties file
+     *  and the "shared secret" from keys/hmac.key
      *
      * @param componentId the id of the component that corresponds to the Config resource
      * @param config the component config
