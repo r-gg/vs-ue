@@ -264,7 +264,7 @@ public class DMAP_Thread extends MB_Thread {
       switch (command) {
         case "login":
           if (content.isEmpty()) {
-            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error credentials required") : "error credentials required");
+            printMsg(them, encipher_mby("error credentials required"));
           } else {
             String[] credentials = content.get().split("\\s", 2);
             var username = credentials[0];
@@ -273,10 +273,10 @@ public class DMAP_Thread extends MB_Thread {
               // successful login!
               inbox = user_db.get(username).right;
               //ok(them);
-              printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
+              printMsg(them, encipher_mby("ok"));
               return inbox;
             } else {
-              printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error bad credentials") : "error bad credentials");
+              printMsg(them, encipher_mby("error bad credentials"));
               return null;
             }
           }
@@ -290,13 +290,13 @@ public class DMAP_Thread extends MB_Thread {
           }
           return null;
         case "quit":
-          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok bye"):"ok bye");
+          printMsg(them, encipher("ok bye"));
           throw new ConnectionEnd();
         case "list":
         case "show":
         case "delete":
         case "logout":
-          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error not logged in"):"error not logged in");
+          printMsg(them, encipher_mby("error not logged in"));
           return null;
         default:
           protocol_error(them); // TODO: encrypt as well?
@@ -307,17 +307,17 @@ public class DMAP_Thread extends MB_Thread {
     // assert: inbox != null
     switch (command) {
       case "login":
-        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error already logged in, 'logout' to switch accounts"):"error already logged in, 'logout' to switch accounts" );
+        printMsg(them, encipher_mby("error already logged in, 'logout' to switch accounts"));
         return inbox;
       case "list":
         var mail_sigs = inbox.list_mails_sigs();
         StringBuilder list = new StringBuilder();
         for(String sig : mail_sigs){
-          list.append(sig + "\n");
+          list.append(sig).append("\n");
         }
         list.append("ok"); // DMAP2.0 change
         // Encrypting the whole message
-        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(list.toString()):list.toString());
+        printMsg(them, encipher_mby(list.toString()));
         return inbox;
       case "show":
         var id = try_parse_int(content);
@@ -330,29 +330,29 @@ public class DMAP_Thread extends MB_Thread {
                     + "subject " + msg.subject + "\n"
                     + "data " + msg.text_body + "\n"
                     + "hash " + ((msg.hash != null)? msg.hash : "");
-            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher(details):details);
+            printMsg(them, encipher_mby(details));
 //            them.println("from " + msg.sender);
 //            them.println("to " + String.join(",", msg.recipients));
 //            them.println("subject " + msg.subject);
 //            them.println("data " + msg.text_body);
             //them.flush();
           } else {
-            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error unknown message id"):"error unknown message id");
+            printMsg(them, encipher_mby("error unknown message id"));
           }
         } else {
-          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error missing or invalid message id"):"error missing or invalid message id");
+          printMsg(them, encipher_mby("error missing or invalid message id"));
         }
         return inbox;
       case "delete":
         id = try_parse_int(content); // test whether that doesn't crash ("var" keyword from other branch super dodgy)
         if(id.isPresent()){
           if(inbox.delete(id.getAsInt())){
-            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
+            printMsg(them, encipher_mby("ok"));
           } else {
-            printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error unknown message id"):"error unknown message id");
+            printMsg(them, encipher_mby("error unknown message id");
           }
         } else {
-          printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("error missing or invalid message id"):"error missing or invalid message id");
+          printMsg(them, encipher_mby("error missing or invalid message id");
         }
         return inbox;
       case "startsecure":
@@ -364,10 +364,10 @@ public class DMAP_Thread extends MB_Thread {
         }
         return inbox;
       case "logout":
-        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok"):"ok");
+        printMsg(them, encipher_mby("ok"));
         return null;
       case "quit":
-        printMsg(them, (state == HandshakeState.CONFIRMED)? encipher("ok bye"):"ok bye");
+        printMsg(them, encipher_mby("ok bye");
         throw new ConnectionEnd();
       default:
         protocol_error(them); // TODO: Also encrypt?
@@ -387,6 +387,16 @@ public class DMAP_Thread extends MB_Thread {
       return OptionalInt.of(id);
     } else {
       return OptionalInt.empty();
+    }
+  }
+
+  /**
+   * depending on the HandshakeState, simply returns the string as is or encrypts it
+   * @param str which may get encrypted
+   * @return either
+   */
+  private String encipher_mby(String str) throws IllegalBlockSizeException, BadPaddingException {
+    return (state == HandshakeState.CONFIRMED) ? encipher(str) : str;
     }
   }
 }
