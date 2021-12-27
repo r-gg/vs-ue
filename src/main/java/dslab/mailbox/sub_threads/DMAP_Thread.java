@@ -3,7 +3,6 @@ package dslab.mailbox.sub_threads;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -349,10 +348,10 @@ public class DMAP_Thread extends MB_Thread {
           if(inbox.delete(id.getAsInt())){
             printMsg(them, encipher_mby("ok"));
           } else {
-            printMsg(them, encipher_mby("error unknown message id");
+            printMsg(them, encipher_mby("error unknown message id"));
           }
         } else {
-          printMsg(them, encipher_mby("error missing or invalid message id");
+          printMsg(them, encipher_mby("error missing or invalid message id"));
         }
         return inbox;
       case "startsecure":
@@ -367,7 +366,7 @@ public class DMAP_Thread extends MB_Thread {
         printMsg(them, encipher_mby("ok"));
         return null;
       case "quit":
-        printMsg(them, encipher_mby("ok bye");
+        printMsg(them, encipher_mby("ok bye"));
         throw new ConnectionEnd();
       default:
         protocol_error(them); // TODO: Also encrypt?
@@ -398,5 +397,4 @@ public class DMAP_Thread extends MB_Thread {
   private String encipher_mby(String str) throws IllegalBlockSizeException, BadPaddingException {
     return (state == HandshakeState.CONFIRMED) ? encipher(str) : str;
     }
-  }
 }
