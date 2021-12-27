@@ -1,6 +1,7 @@
 package dslab.client;
 
 import java.io.*;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -35,6 +36,12 @@ public class MessageClient implements IMessageClient, Runnable {
     // the login credentials for the mailbox server
     private String mailbox_username;
     private String mailbox_password;
+
+    // The reader/writer objects are initialized in "connect_to_mailbox"
+    // and are reused for all later communication with the mailbox server
+    private BufferedReader mb_reader;
+    private PrintWriter mb_writer;
+    // TODO: send "quit" (+ read "ok bye") on shutdown (+aborting?)
 
     /**
      * Creates a new client instance,
@@ -121,13 +128,41 @@ public class MessageClient implements IMessageClient, Runnable {
 
     @Override
     public void run() {
-        shell.run();
-
         // TODO: connect to MB server (for reading own mailbox via DMAP),
+        connect_to_mailbox();
         // "startsecure"
         // "login"
 
+        // NB: once shell runs, it masks (certain?) Errors thrown by the MessageClient thread
+        shell.run();
+    }
 
+    // tries to set up a connection to mb,
+    // initializes reader + writer
+    // checks for proper DMAP2.0 protocol start
+    void connect_to_mailbox() {
+        Socket conn = null;
+        try {
+            conn = new Socket(mailbox_addr.ip(), mailbox_addr.port());
+        } catch (IOException e) {
+            throw new UncheckedIOException("could not connect to configured Mailbox server", e);
+        }
+        try {
+            mb_writer = new PrintWriter(conn.getOutputStream(), true);
+            mb_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+            String server_line = mb_reader.readLine();
+
+            // Am I talking to a DMAP server?
+            if (server_line == null) {
+                throw new ServerError("mailbox server didn't send an initial message");
+            }
+            if (!"ok DMAP2.0".equals(server_line)) {
+                throw new ServerError("mailbox server's initial message was off");
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("IO exception during initial mailbox-server communication", e);
+        }
     }
 
     @Override
@@ -175,6 +210,7 @@ public class MessageClient implements IMessageClient, Runnable {
     @Command
     public void msg(String to, String subject, String data) {
         // TODO
+        // craft the DMTP2.0 msg, including hash.
         // connect to Transfer Server
         // play DMTP2.0
     }
