@@ -47,19 +47,18 @@ public class MessageClient implements IMessageClient, Runnable {
      * @param out the output stream to write console output to
      */
     public MessageClient(String componentId, Config config, InputStream in, PrintStream out) {
-        /*
-        TODO: init client. In particular, read in from property file:
-        transfer.host: the address of the default transfer server
-        transfer.port: the port of the default transfer server
-        transfer.email: the email address to use as from field when sending messages
-        mailbox.host: the address of the default mailbox server
-        mailbox.port: the port of the default mailbox server
-        mailbox.user: the mailbox server login username
-        mailbox.password: the mailbox server login password
-        */
+        // read in from property file
+        try {
+            transfer_addr = new Addr_Info(config.getString("transfer.host"), config.getInt("transfer.port"));
+            mailbox_addr  = new Addr_Info(config.getString("mailbox.host"), config.getInt("mailbox.port"));
+        } catch (UnknownHostException e) {
+            throw new ConfigException("The address information for either transfer or mailbox server seems to be misconfigured", e);
+        }
+        own_mail_addr = config.getString("transfer.email");
+        mailbox_username = config.getString("mailbox.user");
+        mailbox_password = config.getString("mailbox.password");
 
         // read in "hmac.key" (the shared secret) from /keys/
-        // this (single) hmac.key is a stand-in for all shared secrets between any sender+recipient pair
         try {
             // Creating the hash:
             Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
@@ -170,12 +169,13 @@ public class MessageClient implements IMessageClient, Runnable {
         */
     }
 
+    /**
+     * The different arguments are parsed/separated with space as delimiters
+     */
     @Override
     @Command
     public void msg(String to, String subject, String data) {
         // TODO
-        // parse
-        // ? is a separate @Command method needed?
         // connect to Transfer Server
         // play DMTP2.0
     }
