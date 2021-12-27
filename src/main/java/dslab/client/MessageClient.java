@@ -10,6 +10,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
+import at.ac.tuwien.dsg.orvell.Shell;
+import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.shared_models.DMTP_Message;
@@ -24,6 +26,7 @@ import javax.crypto.Mac;
 
 public class MessageClient implements IMessageClient, Runnable {
 
+    private final Shell shell;
     private String HASH_ALGORITHM = "HmacSHA256";
     private Mac hMac;
     /**
@@ -57,6 +60,13 @@ public class MessageClient implements IMessageClient, Runnable {
             System.err.println("HMAC init failed");
             // TODO: Gracefully shutdown
         }
+
+        // start the shell
+        shell = new Shell(in, out);
+        shell.register(this);
+
+        // (prompt may not work correctly/nicely when application is run via ant)
+        shell.setPrompt(componentId + "> ");
     }
 
     /**
@@ -103,6 +113,9 @@ public class MessageClient implements IMessageClient, Runnable {
 
     @Override
     public void run() {
+        // TODO: start the shell
+        shell.run();
+
         // TODO: connect to MB server (for reading own mailbox via DMAP),
         // "startsecure"
         // "login"
@@ -160,7 +173,8 @@ public class MessageClient implements IMessageClient, Runnable {
     @Override
     @Command
     public void shutdown() {
-        // TODO
+        // This will break the shell's read loop and make Shell.run() return gracefully.
+        throw new StopShellException();
     }
 
 
