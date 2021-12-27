@@ -128,8 +128,9 @@ public class MessageClient implements IMessageClient, Runnable {
 
     @Override
     public void run() {
-        // TODO: connect to MB server (for reading own mailbox via DMAP),
         connect_to_mailbox();
+
+        // TODO:
         // "startsecure"
         // "login"
 
