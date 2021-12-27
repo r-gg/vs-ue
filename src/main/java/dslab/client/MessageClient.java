@@ -15,6 +15,7 @@ import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.shared_models.Addr_Info;
+import dslab.shared_models.ConfigException;
 import dslab.shared_models.DMTP_Message;
 import dslab.util.Config;
 import dslab.util.Keys;
@@ -138,6 +139,7 @@ public class MessageClient implements IMessageClient, Runnable {
     @Command
     public void delete(String id) {
         // TODO
+        shell.out().println(id);
     }
 
     @Override
