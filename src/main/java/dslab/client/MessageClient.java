@@ -21,6 +21,8 @@ import dslab.util.Keys;
 
 import javax.crypto.Mac;
 
+import static dslab.util.DMTP_Utils.printMsg;
+
 public class MessageClient implements IMessageClient, Runnable {
 
     private final Shell shell;
@@ -129,9 +131,9 @@ public class MessageClient implements IMessageClient, Runnable {
     @Override
     public void run() {
         connect_to_mailbox();
+        client_handshake();
 
         // TODO:
-        // "startsecure"
         // "login"
 
         // NB: once shell runs, it masks (certain?) Errors thrown by the MessageClient thread
@@ -228,5 +230,20 @@ public class MessageClient implements IMessageClient, Runnable {
     public static void main(String[] args) throws Exception {
         IMessageClient client = ComponentFactory.createMessageClient(args[0], System.in, System.out);
         client.run();
+    }
+
+    /**
+     * wip
+     */
+    void client_handshake () {
+        printMsg(mb_writer, "startsecure");
+        // TODO:
+        // comp_id <- parse "ok <component-id>"
+        // pubkey <- get_pubkey(comp_id)
+        // challenge <- 32 random bytes
+        // "initialize an AES cipher, by"
+        // new secret key
+        // new iv
+        // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
     }
 }
