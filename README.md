@@ -1,5 +1,9 @@
 # Info and Notes on DS UE Assignment 1
 
+## Secure Channel
+Do the chunks that are encrypted + decrypted need to be synchronized?
+i.e. is: (encrypt(line1) + encrypt(line2)) == encrypt(line1 + line2) ?
+
 ## Concurrency and Synchronization "Architecture"
 TransferServer:
 - 1 AcceptThread

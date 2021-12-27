@@ -207,15 +207,33 @@ public class MessageClient implements IMessageClient, Runnable {
     }
 
     /**
+     * wip
      * The different arguments are parsed/separated with space as delimiters
      */
     @Override
     @Command
     public void msg(String to, String subject, String data) {
-        // TODO
-        // craft the DMTP2.0 msg, including hash.
+        // TODO: craft the DMTP2.0 msg, including hash.
+
         // connect to Transfer Server
-        // play DMTP2.0
+        try (Socket conn = new Socket(transfer_addr.ip(), transfer_addr.port());
+            PrintWriter transfer_writer = new PrintWriter(conn.getOutputStream(), true);
+            BufferedReader transfer_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))
+            ){
+            String server_line = mb_reader.readLine();
+
+            // Am I talking to a DMTP server?
+            if (server_line == null) {
+                throw new ServerError("transfer server didn't send an initial message");
+            }
+            if (!"ok DMTP2.0".equals(server_line)) {
+                throw new ServerError("transfer server's initial message was off");
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException("IO exception during communication with transfer server for a 'msg' command", e);
+        }
+
+        // TODO: play DMTP2.0
     }
 
     @Override
