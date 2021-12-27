@@ -121,7 +121,6 @@ public class MessageClient implements IMessageClient, Runnable {
 
     @Override
     public void run() {
-        // TODO: start the shell
         shell.run();
 
         // TODO: connect to MB server (for reading own mailbox via DMAP),
