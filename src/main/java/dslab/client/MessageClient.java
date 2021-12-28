@@ -223,26 +223,22 @@ public class MessageClient implements IMessageClient, Runnable {
         msg.hash = calculateHash(msg);
 
         // connect to Transfer Server
+        String result;
         try (Socket conn = new Socket(transfer_addr.ip(), transfer_addr.port());
             PrintWriter transfer_writer = new PrintWriter(conn.getOutputStream(), true);
             BufferedReader transfer_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))
             ){
-            String server_line = mb_reader.readLine();
-
-            // Am I talking to a DMTP server?
-            if (server_line == null) {
-                throw new ServerError("transfer server didn't send an initial message");
-            }
-            if (!"ok DMTP2.0".equals(server_line)) {
-                throw new ServerError("transfer server's initial message was off");
-            }
+            result = play_DMTP2(transfer_writer, transfer_reader, msg);
         } catch (IOException e) {
             throw new UncheckedIOException("IO exception during communication with transfer server for a 'msg' command", e);
         }
 
-        // TODO: play DMTP2.0
+        shell.out().println(result);
+    }
 
-        // "ok" or "error ..."
+    // TODO wip
+    private String play_DMTP2(PrintWriter out, BufferedReader in, DMTP_Message msg) throws IOException {
+        return "ok";
     }
 
     /**
