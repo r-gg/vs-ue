@@ -15,10 +15,11 @@ public class DMTP_Message {
 
   /**
    * sets (or overwrites) the recipients field with a list of recipients parsed from...
+   *
    * @param recip_str, a comma-separated list of one or more email addresses. e.g.: "someone@example.com,superman@cos.arctic"
    * @return how many recipients were detected/added
    * @throws FormatException if the recip_str is null, empty, or if for any of the substrings InputChecker.is_mail_address() is false
-   *          in this case, the message remains unchanged.
+   *                         in this case, the message remains unchanged.
    */
   public int set_recips_by_string(String recip_str) throws FormatException {
     if (recip_str == null) {
@@ -37,14 +38,14 @@ public class DMTP_Message {
     this.recipients = new LinkedList<>();
     Collections.addAll(this.recipients, split_recips);
     return n_recipients;
-    }
+  }
 
   /**
-   *  simple DMTP_Message validation
-   *  only checks whether all fields are set (to something non-"empty" or "blank")
-   *  doesn't check validity of sender / recipient mail addresses
-   *  returns list of problems (as List<String>)
-  */
+   * simple DMTP_Message validation
+   * only checks whether all fields are set (to something non-"empty" or "blank")
+   * doesn't check validity of sender / recipient mail addresses
+   * returns list of problems (as List<String>)
+   */
   public static List<String> collectProblems(DMTP_Message msg) {
     List<String> probs = new LinkedList<>();
     if (msg.recipients == null || msg.recipients.isEmpty()) {
@@ -68,8 +69,8 @@ public class DMTP_Message {
    * in the order: from, to, subject, data
    * separated by newlines
    */
-  public String getJoined(){
-    String recipients_str = this.recipients.toString().replace("[","").replace("]","");
+  public String getJoined() {
+    String recipients_str = this.recipients.toString().replace("[", "").replace("]", "");
     return String.join("\n", this.sender, recipients_str, this.subject, this.text_body);
   }
 }

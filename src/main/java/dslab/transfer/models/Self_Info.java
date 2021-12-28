@@ -8,7 +8,7 @@ import java.net.UnknownHostException;
 /**
  * encapsulates the running server's own IP+port
  */
- public class Self_Info implements Addr_InfoI {
+public class Self_Info implements Addr_InfoI {
   /**
    * tries to find out own IP address upon construction
    *

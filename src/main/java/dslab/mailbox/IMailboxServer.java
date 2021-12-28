@@ -3,12 +3,14 @@ package dslab.mailbox;
 /**
  * The mailbox server receives mails via DMTP from transfer servers, and makes them available to
  * users via the DMAP protocol.
- *
+ * <p>
  * NB from LVA: Do not change the existing method signatures!
  */
 public interface IMailboxServer extends Runnable {
 
-  /** Starts the server. */
+  /**
+   * Starts the server.
+   */
   @Override
   void run();
 

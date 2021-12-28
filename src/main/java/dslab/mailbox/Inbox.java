@@ -28,6 +28,7 @@ public class Inbox {
 
   /**
    * pre: internalMap never holds null-values
+   *
    * @param id the ID of the message to delete
    * @return true if message was deleted, false if the message didn't exist in the first place
    */
@@ -45,7 +46,7 @@ public class Inbox {
 
   public synchronized List<String> list_mails_sigs() {
     List<String> res = new LinkedList<>();
-    for(Map.Entry<Integer, DMTP_Message> entry: internalMap.entrySet()){
+    for (Map.Entry<Integer, DMTP_Message> entry : internalMap.entrySet()) {
       var ind = entry.getKey();
       var mail = entry.getValue();
       res.add(ind + " " + mail.sender + " " + mail.subject);

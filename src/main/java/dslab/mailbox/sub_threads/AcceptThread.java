@@ -26,7 +26,7 @@ public class AcceptThread implements Runnable {
   private final String componentId;
 
   public AcceptThread(
-          String componentId,
+      String componentId,
       String domain,
       int port,
       AtomicBoolean si,

@@ -138,7 +138,7 @@ public class TransferThread implements Runnable {
       if (server_line == null) {
         return Optional.of(connection_ended_string);
       }
-      if(server_line.matches("^error.*")){ // test if regex ok
+      if (server_line.matches("^error.*")) { // test if regex ok
         return Optional.of("mailbox server said: " + server_line);
       }
       if (!server_line.matches("^ok \\d*")) { // test if regex ok
@@ -176,7 +176,7 @@ public class TransferThread implements Runnable {
       }
 
       // set mail's hash if hash is present
-      if(msg.hash != null) {
+      if (msg.hash != null) {
         out.println("hash " + msg.hash);
         server_line = in.readLine();
         if (server_line == null) {
@@ -220,7 +220,9 @@ public class TransferThread implements Runnable {
 
     // f)
     // rudimentary check, see doc @ udp_socket initalization
-    if (udp_socket != null && monitor_info != null && msg != null) send_monitor_msg(msg);
+    if (udp_socket != null && monitor_info != null && msg != null) {
+      send_monitor_msg(msg);
+    }
 
     return Optional.empty();
   }
@@ -246,6 +248,7 @@ public class TransferThread implements Runnable {
   /**
    * pre: monitor_info is init'd
    * pre: udp_socket is init'd
+   *
    * @param msg
    */
   private void send_monitor_msg(DMTP_Message msg) {

@@ -31,8 +31,8 @@ public final class ComponentFactory {
    * Creates a new {@link IMonitoringServer} instance.
    *
    * @param componentId the component id
-   * @param in the input stream used for accepting cli commands
-   * @param out the output stream to print to
+   * @param in          the input stream used for accepting cli commands
+   * @param out         the output stream to print to
    * @return a new MonitoringServer instance
    */
   public static IMonitoringServer createMonitoringServer(
@@ -49,8 +49,8 @@ public final class ComponentFactory {
    * Creates a new {@link IMailboxServer} instance.
    *
    * @param componentId the component id
-   * @param in the input stream used for accepting cli commands
-   * @param out the output stream to print to
+   * @param in          the input stream used for accepting cli commands
+   * @param out         the output stream to print to
    * @return a new MailboxServer instance
    */
   public static IMailboxServer createMailboxServer(
@@ -68,8 +68,8 @@ public final class ComponentFactory {
    * Creates a new {@link ITransferServer} instance.
    *
    * @param componentId the component id
-   * @param in the input stream used for accepting cli commands
-   * @param out the output stream to print to
+   * @param in          the input stream used for accepting cli commands
+   * @param out         the output stream to print to
    * @return a new TransferServer instance
    */
   public static ITransferServer createTransferServer(
@@ -86,12 +86,12 @@ public final class ComponentFactory {
    * Creates a new {@link INameserver} instance.
    *
    * @param componentId the component id
-   * @param in the input stream used for accepting cli commands
-   * @param out the output stream to print to
+   * @param in          the input stream used for accepting cli commands
+   * @param out         the output stream to print to
    * @return a new Nameserver instance
    */
   public static INameserver createNameserver(String componentId, InputStream in, PrintStream out)
-          throws Exception {
+      throws Exception {
     /*
      * TODO: Here you can modify the code (if necessary) to instantiate your components
      */
@@ -104,12 +104,12 @@ public final class ComponentFactory {
    * Creates a new {@link IMessageClient} instance.
    *
    * @param componentId the component id
-   * @param in the input stream used for accepting cli commands
-   * @param out the output stream to print to
+   * @param in          the input stream used for accepting cli commands
+   * @param out         the output stream to print to
    * @return a new MessageClient instance
    */
   public static IMessageClient createMessageClient(String componentId, InputStream in, PrintStream out)
-          throws Exception {
+      throws Exception {
     /*
      * TODO: Here you can modify the code (if necessary) to instantiate your components
      */

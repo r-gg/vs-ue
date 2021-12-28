@@ -144,14 +144,13 @@ public class TransferServer implements ITransferServer, Runnable {
    * parse the socket addresses.
    *
    * @return a domain-name -> Addr_Info Map
-   *
    */
-  private Map<String, Addr_Info> domain_lookup(){
+  private Map<String, Addr_Info> domain_lookup() {
     Set<String> keys = this.maildomains_config.listKeys();
     Map<String, Addr_Info> res = new HashMap<>();
 
     for (String k : keys) {
-      String   temp1 = this.maildomains_config.getString(k);
+      String temp1 = this.maildomains_config.getString(k);
       String[] temp2 = temp1.split(":", 2);
 
       Addr_Info addr = null;

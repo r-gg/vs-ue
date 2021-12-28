@@ -36,10 +36,15 @@ public class DMTP_Utils {
   static public Optional<Pair<String, Optional<String>>> split_cmd_cntnt(String line) {
     String[] words = line.trim().split("\\s", 2);
     switch (words.length) {
-      case 0: return Optional.empty();
-      case 1: return Optional.of(new Pair<>(words[0], Optional.empty()));
-      case 2: return Optional.of(new Pair<>(words[0], Optional.of(words[1])));
-      default: assert (false); return Optional.empty();
+      case 0:
+        return Optional.empty();
+      case 1:
+        return Optional.of(new Pair<>(words[0], Optional.empty()));
+      case 2:
+        return Optional.of(new Pair<>(words[0], Optional.of(words[1])));
+      default:
+        assert (false);
+        return Optional.empty();
     }
   }
 }

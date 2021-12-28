@@ -46,10 +46,10 @@ public class MailboxServer implements IMailboxServer, Runnable {
   /**
    * Creates a new server instance.
    *
-   * @param componentId the id of the component that corresponds to the Config resource
+   * @param componentId      the id of the component that corresponds to the Config resource
    * @param component_config the component config
-   * @param in the input stream to read console input from
-   * @param out the output stream to write console output to
+   * @param in               the input stream to read console input from
+   * @param out              the output stream to write console output to
    */
   public MailboxServer(String componentId, Config component_config, Config user_cred_config, InputStream in, PrintStream out) {
 
@@ -60,7 +60,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
     domain = component_config.getString("domain");
 
     // read usernames and passwords from users file, feed into user_db
-    for (String s: user_cred_config.listKeys()) {
+    for (String s : user_cred_config.listKeys()) {
       user_db.put(s, new Pair<>(user_cred_config.getString(s), new Inbox()));
     }
 
@@ -75,7 +75,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
   public void run() {
     // Spawning the 2 AcceptThreads
     exec.execute(new AcceptThread(componentId, domain, DMTP_port, shutdown_initiated, user_db, new DMTP_ThreadFactory()));
-    exec.execute(new AcceptThread(componentId,domain, DMAP_port, shutdown_initiated, user_db, new DMAP_ThreadFactory()));
+    exec.execute(new AcceptThread(componentId, domain, DMAP_port, shutdown_initiated, user_db, new DMAP_ThreadFactory()));
     // ... and the Shell
     exec.execute(shell); // pdf mentions shell blocking may not be bad...
 

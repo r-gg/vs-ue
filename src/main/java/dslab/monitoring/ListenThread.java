@@ -51,17 +51,17 @@ public class ListenThread implements Runnable {
       if (split.length == 2
           && InputChecker.is_server_addr_string(split[0])
           && InputChecker.is_mail_address(split[1])
-      ){
+      ) {
         var host = split[0];
         var user = split[1];
 
-        if(server_counts.containsKey(host)){
+        if (server_counts.containsKey(host)) {
           server_counts.replace(host, server_counts.get(host) + 1);
         } else {
           server_counts.put(host, 1);
         }
 
-        if(address_counts.containsKey(user)){
+        if (address_counts.containsKey(user)) {
           address_counts.replace(user, address_counts.get(user) + 1);
         } else {
           address_counts.put(user, 1);

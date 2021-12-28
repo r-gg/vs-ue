@@ -89,7 +89,7 @@ public class MonitoringServer implements IMonitoringServer {
   @Override
   @Command
   public void addresses() {
-    for(Map.Entry<String, Integer> e : address_counts.entrySet()){
+    for (Map.Entry<String, Integer> e : address_counts.entrySet()) {
       shell.out().println(e.getKey() + " " + e.getValue());
     }
     shell.out().flush();
@@ -104,7 +104,7 @@ public class MonitoringServer implements IMonitoringServer {
   @Override
   @Command
   public void servers() {
-    for(Map.Entry<String, Integer> e : server_counts.entrySet()){
+    for (Map.Entry<String, Integer> e : server_counts.entrySet()) {
       shell.out().println(e.getKey() + " " + e.getValue());
     }
     shell.out().flush();
@@ -116,7 +116,9 @@ public class MonitoringServer implements IMonitoringServer {
     shell.out().println("shutdown initiated! Please give it a couple of seconds");
 
     shutdown_initiated.set(true);
-    if (udp_socket != null) udp_socket.close();
+    if (udp_socket != null) {
+      udp_socket.close();
+    }
 
     throw new StopShellException(); // This will break the shell's read loop and make Shell.run() return gracefully.
   }

@@ -8,7 +8,9 @@ package dslab.monitoring;
  */
 public interface IMonitoringServer extends Runnable {
 
-  /** Starts the server. */
+  /**
+   * Starts the server.
+   */
   @Override
   void run();
 
@@ -18,9 +20,13 @@ public interface IMonitoringServer extends Runnable {
    */
   void shutdown();
 
-  /** CLI command to report usage statistics for transfer servers. */
+  /**
+   * CLI command to report usage statistics for transfer servers.
+   */
   void servers();
 
-  /** CLI command to report usage statistics for individual senders. */
+  /**
+   * CLI command to report usage statistics for individual senders.
+   */
   void addresses();
 }

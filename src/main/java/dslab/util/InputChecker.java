@@ -4,11 +4,11 @@ import java.util.Arrays;
 
 public class InputChecker {
 
-  public static boolean not_null(Object o){
+  public static boolean not_null(Object o) {
     return o != null;
   }
 
-  public static boolean is_null(Object o){
+  public static boolean is_null(Object o) {
     return o == null;
   }
 
@@ -17,7 +17,6 @@ public class InputChecker {
   }
 
   /**
-   *
    * @param str
    * @return whether str has the form of an email address: "<non-blank, no space>@<non-blank, no space>"
    */
@@ -31,8 +30,8 @@ public class InputChecker {
 
     var splits = str.split("@", 0);
     return splits.length == 2 &&
-            !"".equals(splits[0]) &&
-            !"".equals(splits[1]);
+        !"".equals(splits[0]) &&
+        !"".equals(splits[1]);
   }
 
 
@@ -62,14 +61,14 @@ public class InputChecker {
     }
 
     // blub is int-parsable
-    if(!is_int_parsable(blub)) {
+    if (!is_int_parsable(blub)) {
       return false;
     }
 
     return true;
   }
 
-  private static boolean is_int_parsable (String int_str) {
+  private static boolean is_int_parsable(String int_str) {
     try {
       var parse_res = Integer.parseInt(int_str);
     } catch (NumberFormatException e) {

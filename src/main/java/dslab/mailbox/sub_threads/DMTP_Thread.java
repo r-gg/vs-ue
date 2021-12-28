@@ -178,7 +178,7 @@ public class DMTP_Thread extends MB_Thread {
       case "send":
         List<String> probs = DMTP_Message.collectProblems(msg);
         if (probs.size() == 0) {
-          for(String r: msg.recipients) {
+          for (String r : msg.recipients) {
             mby_add_mail_to_mailbox(r, msg);
           }
           ok(them);
@@ -200,11 +200,13 @@ public class DMTP_Thread extends MB_Thread {
 
   /**
    * if input corresponds to a locally known user, add msg to that users mailbox
+   *
    * @param recep_address pre: mail-address-shaped.
    */
-  private void mby_add_mail_to_mailbox (String recep_address, DMTP_Message msg){
+  private void mby_add_mail_to_mailbox(String recep_address, DMTP_Message msg) {
     var addr_split = recep_address.split("@", 0);
-    if (domain.equals(addr_split[1]) && user_db.containsKey(addr_split[0]))
+    if (domain.equals(addr_split[1]) && user_db.containsKey(addr_split[0])) {
       user_db.get(addr_split[0]).right.add(msg);
+    }
   }
 }

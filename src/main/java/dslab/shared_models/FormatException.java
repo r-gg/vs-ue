@@ -5,7 +5,7 @@ package dslab.shared_models;
  * Can/Should probably be handled.
  */
 public class FormatException extends Exception {
-  FormatException (String details_on_problem) {
+  FormatException(String details_on_problem) {
     super(details_on_problem);
   }
 }
