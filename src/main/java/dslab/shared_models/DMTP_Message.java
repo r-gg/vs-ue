@@ -1,5 +1,8 @@
 package dslab.shared_models;
 
+import dslab.util.InputChecker;
+
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -9,6 +12,32 @@ public class DMTP_Message {
   public String subject;
   public String text_body;
   public String hash;
+
+  /**
+   * sets (or overwrites) the recipients field with a list of recipients parsed from...
+   * @param recip_str, a comma-separated list of one or more email addresses. e.g.: "someone@example.com,superman@cos.arctic"
+   * @return how many recipients were detected/added
+   * @throws FormatException if the recip_str is null, empty, or if for any of the substrings InputChecker.is_mail_address() is false
+   *          in this case, the message remains unchanged.
+   */
+  public int set_recips_by_string(String recip_str) throws FormatException {
+    if (recip_str == null) {
+      throw new FormatException("no recipient string was provided");
+    }
+    String[] split_recips = recip_str.split(",", 0);
+    int n_recipients = split_recips.length;
+    if (n_recipients < 1) {
+      throw new FormatException("a string with no recipient was provided");
+    }
+    for (String r : split_recips) {
+      if (!InputChecker.is_mail_address(r)) {
+        throw new FormatException("at least one recipient address is malformed");
+      }
+    }
+    this.recipients = new LinkedList<>();
+    Collections.addAll(this.recipients, split_recips);
+    return n_recipients;
+    }
 
   /**
    *  simple DMTP_Message validation

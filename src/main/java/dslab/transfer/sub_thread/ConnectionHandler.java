@@ -2,6 +2,7 @@ package dslab.transfer.sub_thread;
 
 import dslab.shared_models.ConnectionEnd;
 import dslab.shared_models.DMTP_Message;
+import dslab.shared_models.FormatException;
 import dslab.util.InputChecker;
 
 import static dslab.util.DMTP_Utils.*;
@@ -9,8 +10,6 @@ import static dslab.util.DMTP_Utils.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
@@ -70,23 +69,14 @@ public class ConnectionHandler extends Thread {
     switch (command) {
       case "to":
         if (content.isPresent()) {
-          String[] recipients_parsed = content.get().split(",", 0);
-          int n_recipients = recipients_parsed.length;
-          boolean any_bad_recips = false;
-          for (String r : recipients_parsed) {
-            if (!InputChecker.is_mail_address(r)) {
-              any_bad_recips = true;
-              break;
-            }
-          }
-          if (any_bad_recips) {
-            error(them, "at least one recipient address is malformed");
+          int n_recipients;
+          try {
+            n_recipients = msg.set_recips_by_string(content.get());
+          } catch (FormatException fe) {
+            error(them, fe.getMessage());
             break;
-          } else {
-            msg.recipients = new LinkedList<>();
-            Collections.addAll(msg.recipients, recipients_parsed);
-            ok(them, String.valueOf(n_recipients));
           }
+          ok(them, String.valueOf(n_recipients));
         } else {
           error(them, "no recipients specified");
         }
