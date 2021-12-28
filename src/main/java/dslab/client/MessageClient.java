@@ -26,24 +26,33 @@ import static dslab.util.DMTP_Utils.printMsg;
 public class MessageClient implements IMessageClient, Runnable {
 
     private final Shell shell;
-    private String HASH_ALGORITHM = "HmacSHA256";
+    private final String HASH_ALGORITHM = "HmacSHA256";
     private Mac hMac; // gets initiated with the secret key in constructor.
     //  that (single) key is a stand-in for all shared secrets between any sender+recipient pair
 
     // IP + Port for default servers
-    private Addr_Info transfer_addr;
-    private Addr_Info mailbox_addr;
+    private final Addr_Info transfer_addr;
+    private final Addr_Info mailbox_addr;
     // the user mail address
-    private String own_mail_addr;
+    private final String own_mail_addr;
     // the login credentials for the mailbox server
-    private String mailbox_username;
-    private String mailbox_password;
+    private final String mailbox_username;
+    private final String mailbox_password;
 
     // The reader/writer objects are initialized in "connect_to_mailbox"
     // and are reused for all later communication with the mailbox server
     private BufferedReader mb_reader;
     private PrintWriter mb_writer;
-    // TODO: send "quit" (+ read "ok bye") on shutdown (+aborting?)
+    // TODO: properly end mailbox-connection
+    // on shutdown (+ when aborting?): send "quit" (+ read "ok bye")
+    // close the mb-socket. I _think_ mb_reader.close() does the trick.
+
+
+    // LIFECYCLE START
+    public static void main(String[] args) throws Exception {
+        IMessageClient client = ComponentFactory.createMessageClient(args[0], System.in, System.out);
+        client.run();
+    }
 
     /**
      * Creates a new client instance,
@@ -78,54 +87,10 @@ public class MessageClient implements IMessageClient, Runnable {
             // TODO: Gracefully shutdown
         }
 
-        // start the shell
+        // configure the shell
         shell = new Shell(in, out);
         shell.register(this);
-
-        // (prompt may not work correctly/nicely when application is run via ant)
         shell.setPrompt(componentId + "> ");
-    }
-
-    /**
-     * Returns the base64 encoded hash of the message
-     * @param message to be hashed
-     * @return b64 encoded hash of the message
-     */
-    private String calculateHash(DMTP_Message message){
-        hMac.update(message.getJoined().getBytes());
-        byte[] hash = hMac.doFinal();
-        return Base64.getEncoder().encodeToString(hash);
-    }
-
-    /**
-     * Returns the base64 encoded hash of the message
-     * @param message to be hashed, formatted as described in assignment sheet (Fields joined with '\n')
-     * @return b64 encoded hash of the message
-     */
-    private String calculateHash(String message){
-        hMac.update(message.getBytes());
-        byte[] hash = hMac.doFinal();
-        return Base64.getEncoder().encodeToString(hash);
-    }
-
-    /**
-     * Checks if the value of the hash matches the actual hash of the message
-     * @param message received message, to be checked
-     * @param hash received hash (b64 encoded), to be checked
-     * @return true if hash is correct, false otherwise
-     */
-    private boolean isHashCorrect(DMTP_Message message, String hash){
-        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
-    }
-
-    /**
-     * Checks if the value of the hash matches the actual hash of the message
-     * @param message received message, to be checked (fields joined with '\n')
-     * @param hash received hash (b64 encoded), to be checked
-     * @return true if hash is correct, false otherwise
-     */
-    private boolean isHashCorrect(String message, String hash){
-        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
     }
 
     @Override
@@ -139,6 +104,15 @@ public class MessageClient implements IMessageClient, Runnable {
         // NB: once shell runs, it masks (certain?) Errors thrown by the MessageClient thread
         shell.run();
     }
+
+    @Override
+    @Command
+    public void shutdown() {
+        // This will break the shell's read loop and make Shell.run() return gracefully.
+        throw new StopShellException();
+    }
+    // LIFECYCLE END
+
 
     // tries to set up a connection to mb,
     // initializes reader + writer
@@ -166,6 +140,21 @@ public class MessageClient implements IMessageClient, Runnable {
         } catch (IOException e) {
             throw new UncheckedIOException("IO exception during initial mailbox-server communication", e);
         }
+    }
+
+    /**
+     * wip
+     */
+    void client_handshake () {
+        printMsg(mb_writer, "startsecure");
+        // TODO:
+        // comp_id <- parse "ok <component-id>"
+        // pubkey <- get_pubkey(comp_id)
+        // challenge <- 32 random bytes
+        // "initialize an AES cipher, by"
+        // new secret key
+        // new iv
+        // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
     }
 
     @Override
@@ -236,32 +225,45 @@ public class MessageClient implements IMessageClient, Runnable {
         // TODO: play DMTP2.0
     }
 
-    @Override
-    @Command
-    public void shutdown() {
-        // This will break the shell's read loop and make Shell.run() return gracefully.
-        throw new StopShellException();
-    }
-
-
-
-    public static void main(String[] args) throws Exception {
-        IMessageClient client = ComponentFactory.createMessageClient(args[0], System.in, System.out);
-        client.run();
+    /**
+     * Returns the base64 encoded hash of the message
+     * @param message to be hashed
+     * @return b64 encoded hash of the message
+     */
+    private String calculateHash(DMTP_Message message){
+        hMac.update(message.getJoined().getBytes());
+        byte[] hash = hMac.doFinal();
+        return Base64.getEncoder().encodeToString(hash);
     }
 
     /**
-     * wip
+     * Returns the base64 encoded hash of the message
+     * @param message to be hashed, formatted as described in assignment sheet (Fields joined with '\n')
+     * @return b64 encoded hash of the message
      */
-    void client_handshake () {
-        printMsg(mb_writer, "startsecure");
-        // TODO:
-        // comp_id <- parse "ok <component-id>"
-        // pubkey <- get_pubkey(comp_id)
-        // challenge <- 32 random bytes
-        // "initialize an AES cipher, by"
-        // new secret key
-        // new iv
-        // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
+    private String calculateHash(String message){
+        hMac.update(message.getBytes());
+        byte[] hash = hMac.doFinal();
+        return Base64.getEncoder().encodeToString(hash);
+    }
+
+    /**
+     * Checks if the value of the hash matches the actual hash of the message
+     * @param message received message, to be checked
+     * @param hash received hash (b64 encoded), to be checked
+     * @return true if hash is correct, false otherwise
+     */
+    private boolean isHashCorrect(DMTP_Message message, String hash){
+        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
+    }
+
+    /**
+     * Checks if the value of the hash matches the actual hash of the message
+     * @param message received message, to be checked (fields joined with '\n')
+     * @param hash received hash (b64 encoded), to be checked
+     * @return true if hash is correct, false otherwise
+     */
+    private boolean isHashCorrect(String message, String hash){
+        return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
     }
 }
