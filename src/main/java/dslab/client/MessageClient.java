@@ -197,7 +197,13 @@ public class MessageClient implements IMessageClient, Runnable {
     }
 
     /**
-     * The different arguments are parsed/separated with space as delimiters.
+     * Parse a mail and send it to the configured transfer server
+     * The Orvell shell parses the different arguments by interpreting space as delimiters,
+     * except in "quoted strings" (which get unquoted by Orvell)
+     * @param to comma separated list of recipients
+     * @param subject the message subject
+     * @param data the message data
+     *
      * If the recipients are malformed, writes an error to the shell, and doesn't send the message
      */
     @Override
@@ -212,7 +218,6 @@ public class MessageClient implements IMessageClient, Runnable {
             shell.out().println("error" + fe.getMessage());
             return;
         }
-        // TODO: check for + remove enclosing quotation marks on subject and data
         msg.subject = subject;
         msg.text_body = data;
         msg.hash = calculateHash(msg);
@@ -236,6 +241,8 @@ public class MessageClient implements IMessageClient, Runnable {
         }
 
         // TODO: play DMTP2.0
+
+        // "ok" or "error ..."
     }
 
     /**
