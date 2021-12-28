@@ -118,7 +118,7 @@ public class TransferThread implements Runnable {
       if (server_line == null) {
         return Optional.of(connection_ended_string);
       }
-      if (!"ok DMTP".equals(server_line)) {
+      if (!"ok DMTP2.0".equals(server_line)) {
         return Optional.of(server_protocol_error_string);
       }
 

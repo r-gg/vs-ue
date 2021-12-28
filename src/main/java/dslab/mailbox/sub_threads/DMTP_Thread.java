@@ -34,7 +34,7 @@ public class DMTP_Thread extends MB_Thread {
         return;
       }
 
-      ok(writer, "DMTP");
+      ok(writer, "DMTP2.0");
 
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
