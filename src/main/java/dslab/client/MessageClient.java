@@ -196,16 +196,21 @@ public class MessageClient implements IMessageClient, Runnable {
         */
   }
 
+
+  final String connection_ended_str = "error server ended connection prematurely";
+  final String protocol_error_str = "error server committed a DMTP protocol error";
+
   /**
-   * Parse a mail and send it to the configured transfer server
+   * Parse a mail and try to send it to the configured transfer server.
    * The Orvell shell parses the different arguments by interpreting space as delimiters,
    * except in "quoted strings" (which get unquoted by Orvell)
+   *
+   * Prints "ok" if the mail was successfully parsed and sent
+   * Prints "error <something>" if it wasn't
    *
    * @param to      comma separated list of recipients
    * @param subject the message subject
    * @param data    the message data
-   *                <p>
-   *                If the recipients are malformed, writes an error to the shell, and doesn't send the message
    */
   @Override
   @Command
@@ -224,22 +229,115 @@ public class MessageClient implements IMessageClient, Runnable {
     msg.hash = calculateHash(msg);
 
     // connect to Transfer Server
-    String result;
+    String result = "error in the program flow, this should never be printed";
     try (Socket conn = new Socket(transfer_addr.ip(), transfer_addr.port());
          PrintWriter transfer_writer = new PrintWriter(conn.getOutputStream(), true);
-         BufferedReader transfer_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))
-    ) {
-      result = play_DMTP2(transfer_writer, transfer_reader, msg);
+         BufferedReader transfer_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+      try {
+        // and try to send the mail
+        result = play_DMTP2(transfer_writer, transfer_reader, msg);
+      } catch (ServerError se) {
+        shell.out().println(se.getMessage());
+        return;
+      } catch (IOException e) {
+        shell.out().println("error - IO exception occurred while communicating with the transfer server");
+      }
     } catch (IOException e) {
-      throw new UncheckedIOException("IO exception during communication with transfer server for a 'msg' command", e);
+      shell.out().println("error - IO exception while connecting to the transfer server");
     }
+    // I let try-with-resources close all the resources.
 
     shell.out().println(result);
   }
 
-  // TODO wip
-  private String play_DMTP2(PrintWriter out, BufferedReader in, DMTP_Message msg) throws IOException {
+  /**
+   * go through DMTP2.0, i.e. send off the DMTP_Message if everything goes right.
+   *
+   * @return "ok" if everything goes right, "error <something>" if the server sent a protocol-conforming error
+   * @throws ServerError if the server violated the DMTP2.0 protocol or ended the connection
+   * @throws IOException if any of the read/write socket operations failed
+   */
+  private String play_DMTP2(PrintWriter out, BufferedReader in, DMTP_Message msg) throws ServerError, IOException {
+
+    // Am I talking to a DMTP server?
+    String server_line = in.readLine();
+    not_null_guard(server_line);
+    if (!"ok DMTP2.0".equals(server_line)) {
+      throw new ServerError("transfer server's initial message was off");
+    }
+
+    out.println("begin");
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // pass through recipients
+    out.println("to " + String.join(",", msg.recipients));
+    server_line = in.readLine();
+    not_null_guard(server_line);
+    if (server_line.matches("^error.*")) { // regex =^= "error" + whatever
+      return "error on recipients field. Server said: " + server_line;
+    }
+    if (!server_line.matches("^ok \\d*")) { // regex =^= "ok <integer"
+      return protocol_error_str;
+    }
+
+    // set sender
+    out.println("from " + msg.sender);
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // set subject
+    out.println("subject " + msg.subject);
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // set mail's text body
+    out.println("data " + msg.text_body);
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // set mail's hash (should always be present when sending from the client)
+    out.println("hash " + msg.hash);
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // finalize mail and send it off
+    out.println("send");
+    server_line = in.readLine();
+    ok_guard(server_line);
+
+    // quit the socket/DMTP connection
+    out.println("quit");
+    server_line = in.readLine();
+    not_null_guard(server_line);
+    if (!"ok bye".equals(server_line)) {
+      throw new ServerError(protocol_error_str);
+    }
+
+    // sending finished
+    // assert (in.readLine() == null) - if the other server does DMTP correctly.
+
     return "ok";
+  }
+
+  // I use these guard-functions instead of several if-statements above.
+  // I am aware that using exceptions for program flow is kind of an anti-pattern,
+  // but here it allows avoiding a good bit of code duplication + repetitive if-statements
+  // (which non-exception-throwing functions could not avoid)
+  /**
+   * @param server_line is checked for being exactly "ok" (and not null)
+   * @throws ServerError with a meaningful (for DMTP) details-message
+   */
+  private void ok_guard(String server_line) throws ServerError {
+    not_null_guard(server_line);
+    if (!"ok".equals(server_line)) {
+      throw new ServerError(protocol_error_str);
+    }
+  }
+  private void not_null_guard(String server_line) throws ServerError {
+    if (server_line == null) {
+      throw new ServerError(connection_ended_str);
+    }
   }
 
   /**
