@@ -16,6 +16,7 @@ import dslab.ComponentFactory;
 import dslab.shared_models.Addr_Info;
 import dslab.shared_models.ConfigException;
 import dslab.shared_models.DMTP_Message;
+import dslab.shared_models.FormatException;
 import dslab.util.Config;
 import dslab.util.Keys;
 
@@ -196,13 +197,25 @@ public class MessageClient implements IMessageClient, Runnable {
     }
 
     /**
-     * wip
-     * The different arguments are parsed/separated with space as delimiters
+     * The different arguments are parsed/separated with space as delimiters.
+     * If the recipients are malformed, writes an error to the shell, and doesn't send the message
      */
     @Override
     @Command
     public void msg(String to, String subject, String data) {
-        // TODO: craft the DMTP2.0 msg, including hash.
+        // craft the DMTP2.0 message, including hash.
+        DMTP_Message msg = new DMTP_Message();
+        msg.sender = own_mail_addr;
+        try {
+            msg.set_recips_by_string(to);
+        } catch (FormatException fe) {
+            shell.out().println("error" + fe.getMessage());
+            return;
+        }
+        // TODO: check for + remove enclosing quotation marks on subject and data
+        msg.subject = subject;
+        msg.text_body = data;
+        msg.hash = calculateHash(msg);
 
         // connect to Transfer Server
         try (Socket conn = new Socket(transfer_addr.ip(), transfer_addr.port());
