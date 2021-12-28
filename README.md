@@ -1,10 +1,14 @@
-# Info and Notes on DS UE Assignment 1
+# Meta Info
 
-## Secure Channel
+## Assignment 2 Architecture and Questions
+
+### Secure Channel
 Do the chunks that are encrypted + decrypted need to be synchronized?
 i.e. is: (encrypt(line1) + encrypt(line2)) == encrypt(line1 + line2) ?
+### Message Client
+Is any sort of reconnection-feature intended? Or can "Mailbox Server ends connection" directly lead to client aborting? 
 
-## Concurrency and Synchronization "Architecture"
+## Notes on Concurrency and Synchronization "Architecture" (Assignment 1)
 TransferServer:
 - 1 AcceptThread
   - n DMTP-Receive-Threads
