@@ -59,7 +59,7 @@ public class DMAP_Thread extends MB_Thread {
 
       // Initialize the private key and the cipher
       // TODO: read in the appropriate key based on the Mailbox-Server's component-id
-      pk = Keys.readPrivateKey(new File("keys/server/mailbox-earth-planet.der"));
+      pk = Keys.readPrivateKey(new File("keys/server/"+componentId+".der"));
       try {
         rsa_dec_cipher = Cipher.getInstance(ALGORITHM_RSA);
         rsa_dec_cipher.init(Cipher.DECRYPT_MODE, pk);
@@ -284,7 +284,7 @@ public class DMAP_Thread extends MB_Thread {
           }
           return null;
         case "quit":
-          printMsg(them, encipher("ok bye"));
+          printMsg(them, encipher_mby("ok bye"));
           throw new ConnectionEnd();
         case "list":
         case "show":

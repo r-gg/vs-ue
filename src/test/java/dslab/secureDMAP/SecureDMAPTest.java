@@ -1,10 +1,12 @@
 package dslab.secureDMAP;
 
 import dslab.*;
+import dslab.client.IMessageClient;
 import dslab.mailbox.IMailboxServer;
 import dslab.mailbox.MailboxServerProtocolTest;
 import dslab.util.Config;
 import dslab.util.Keys;
+import jdk.jfr.Description;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -301,7 +303,7 @@ public class SecureDMAPTest extends TestBase {
     }
 
     @Test(timeout = 15000)
-    public void invalidKeyOrEncryption() throws Exception {
+    public void serverSideInvalidKeyOrEncryption() throws Exception {
         KeyGenerator generator = KeyGenerator.getInstance("AES");
         generator.init(256);
         SecretKey custom_aes_key = generator.generateKey();
@@ -333,4 +335,7 @@ public class SecureDMAPTest extends TestBase {
             // TODO: Maybe add other incorrect handshake messages, like just invalid key, incorrectly encrypted "ok" at the end...
         }
     }
+
+
+
 }

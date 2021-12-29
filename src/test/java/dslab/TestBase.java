@@ -37,6 +37,9 @@ public class TestBase {
     protected TestInputStream mailboxIn2;
     protected TestOutputStream mailboxOut2;
 
+    protected TestInputStream messageClientIn;
+    protected TestOutputStream messageClientOut;
+
     @Before
     public void setUpBase() throws Exception {
         in = new TestInputStream();
@@ -56,6 +59,9 @@ public class TestBase {
 
         mailboxIn2 = new TestInputStream();
         mailboxOut2 = new TestOutputStream();
+
+        messageClientIn = new TestInputStream();
+        messageClientOut = new TestOutputStream();
     }
 
 }

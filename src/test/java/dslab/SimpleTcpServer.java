@@ -6,9 +6,14 @@ import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import javax.crypto.NoSuchPaddingException;
 
 /**
  * Used for mocking purposes, this class provides a simple control loop over a ServerSocket.
@@ -56,6 +61,14 @@ public class SimpleTcpServer implements Runnable, Closeable {
                     continue;
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
+                } catch (InvalidAlgorithmParameterException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
                 }
             }
 
@@ -78,7 +91,7 @@ public class SimpleTcpServer implements Runnable, Closeable {
         }
     }
 
-    protected void onAccept(Socket socket) throws IOException {
+    protected void onAccept(Socket socket) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if (socketAcceptor != null) {
             socketAcceptor.accept(socket);
         }

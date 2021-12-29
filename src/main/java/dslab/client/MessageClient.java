@@ -3,9 +3,7 @@ package dslab.client;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -13,23 +11,36 @@ import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
-import dslab.shared_models.Addr_Info;
-import dslab.shared_models.ConfigException;
-import dslab.shared_models.DMTP_Message;
-import dslab.shared_models.FormatException;
+import dslab.mailbox.sub_threads.DMAP_Thread;
+import dslab.shared_models.*;
 import dslab.util.Config;
 import dslab.util.Keys;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-import javax.crypto.Mac;
+import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
+import static dslab.util.DMTP_Utils.error;
 import static dslab.util.DMTP_Utils.printMsg;
 
 public class MessageClient implements IMessageClient, Runnable {
 
+  private static final Log LOG = LogFactory.getLog(MessageClient.class);
+
+  private boolean shutdown_initiated = false;
   private final Shell shell;
   private final String HASH_ALGORITHM = "HmacSHA256";
   private Mac hMac; // gets initiated with the secret key in constructor.
   //  that (single) key is a stand-in for all shared secrets between any sender+recipient pair
+
+  // Secure channel stuff
+  private static final String ALGORITHM_RSA = "RSA/ECB/PKCS1Padding";
+  private static final String ALGORITHM_AES = "AES/CTR/NoPadding";
+  SecretKey custom_aes_key;
+  Cipher aes_enc_cipher, aes_dec_cipher;
+  private boolean secure_channel_activated = false;
 
   // IP + Port for default servers
   private final Addr_Info transfer_addr;
@@ -97,7 +108,13 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   public void run() {
     connect_to_mailbox();
-    client_handshake();
+    try {
+      client_handshake();
+    }catch (IOException | HandshakeException e){
+      // TODO: Handle exceptions
+      LOG.error("oops something went wrong in the handshake");
+    }
+
 
     // TODO:
     // "login"
@@ -109,6 +126,7 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void shutdown() {
+    shutdown_initiated = true;
     // This will break the shell's read loop and make Shell.run() return gracefully.
     throw new StopShellException();
   }
@@ -146,17 +164,126 @@ public class MessageClient implements IMessageClient, Runnable {
   /**
    * wip
    */
-  void client_handshake() {
+  void client_handshake() throws IOException, HandshakeException{
     printMsg(mb_writer, "startsecure");
     // TODO:
     // comp_id <- parse "ok <component-id>"
+
+    String server_line = mb_reader.readLine();
+    if(!server_line.startsWith("ok "))
+      throw new HandshakeException("Server did not answer with ok after 'startsecure' was sent");
+    String mailbox_component_id = server_line.split(" ")[1];
+
+
     // pubkey <- get_pubkey(comp_id)
     // challenge <- 32 random bytes
     // "initialize an AES cipher, by"
     // new secret key
     // new iv
     // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
+    try{
+
+      Cipher rsa_cipher = Cipher.getInstance(ALGORITHM_RSA);
+      PublicKey publicKey = Keys.readPublicKey(new File("keys/client/"+ mailbox_component_id +"_pub.der"));
+      rsa_cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+
+      KeyGenerator generator = KeyGenerator.getInstance("AES");
+      generator.init(256);
+      custom_aes_key = generator.generateKey();
+
+      SecureRandom secureRandom = new SecureRandom();
+      final byte[] iv_bytes = new byte[16];
+      secureRandom.nextBytes(iv_bytes);
+
+      IvParameterSpec iv = new IvParameterSpec(iv_bytes);
+
+      aes_enc_cipher = Cipher.getInstance(ALGORITHM_AES);
+      aes_enc_cipher.init(Cipher.ENCRYPT_MODE, custom_aes_key, iv);
+
+      aes_dec_cipher = Cipher.getInstance(ALGORITHM_AES);
+      aes_dec_cipher.init(Cipher.DECRYPT_MODE, custom_aes_key, iv);
+
+      String challenge = "challlenge";
+      String req_plain = String.join(" ", "ok", challenge, Base64.getEncoder().encodeToString(custom_aes_key.getEncoded()),
+              Base64.getEncoder().encodeToString(iv_bytes));
+
+      byte[] challenge_encrypted = rsa_cipher.doFinal(req_plain.getBytes());
+      String challenge_encoded = Base64.getEncoder().encodeToString(challenge_encrypted);
+
+      mb_writer.println(challenge_encoded);
+      mb_writer.flush();
+
+      server_line = mb_reader.readLine();
+      not_null_guard(server_line);
+
+      // decode
+      byte[] decoded_server_challenge = Base64.getDecoder().decode(server_line);
+      //decrypt
+      String decrypted_server_challenge = new String(aes_dec_cipher.doFinal(decoded_server_challenge));
+
+      if(!"ok ".equals(decrypted_server_challenge.substring(0, 3))){
+        throw new HandshakeException("Server did not return a valid response after sending the challenge");
+      }
+
+      if(!challenge.equals(decrypted_server_challenge.split(" ")[1]))
+        throw new HandshakeException("challenges do not match");
+
+      byte[] ok_encrypted = aes_enc_cipher.doFinal("ok".getBytes());
+      String ok_encoded = Base64.getEncoder().encodeToString(ok_encrypted);
+
+      mb_writer.println(ok_encoded);
+      mb_writer.flush();
+
+      secure_channel_activated = true;
+
+    } catch (BadPaddingException | IllegalBlockSizeException e) {
+      throw new HandshakeException("Bad padding or illegal block size in decrpytion",e);
+    } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
+      throw new HandshakeException("Invalid key or invalid algorithm for the AES cypher",e);
+    } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+      throw new HandshakeException("The algorithm or padding used for initializing the AES cypher was not found",e);
+    } catch (IllegalArgumentException e) {
+      throw new HandshakeException("Invalid agrument when decoding b64",e);
+    }
+
+
   }
+
+  /**
+   * If secure channel has been confirmed, the method encrypts and encodes the message with the shared secret key and base64 encoding.
+   * The result of the method is the encrypted and encoded message which can be sent via the socket.
+   *
+   * @param message to be encryped and encoded
+   * @return string with the encryped and then encoded message if the secure channel was started, otherwise null
+   */
+  private String encipher(String message) throws IllegalBlockSizeException, BadPaddingException {
+    if (!secure_channel_activated || aes_enc_cipher == null) {
+      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
+      return null;
+    } else {
+      byte[] encrypted = aes_enc_cipher.doFinal(message.getBytes());
+      return Base64.getEncoder().encodeToString(encrypted);
+    }
+  }
+
+  /**
+   * If secure channel has been confirmed, the method decodes and decrypts the message with the shared secret key and base64 encoding.
+   * The result of the method is the decoded and decrypted message which can be further interpreted by the server side protocol resolver.
+   *
+   * @param encoded message which is also encrypted
+   * @return string with the plain text message if the secure channel was started, otherwise null
+   */
+  private String decipher(String encoded) throws IllegalBlockSizeException, BadPaddingException {
+    if (!secure_channel_activated || aes_dec_cipher == null) {
+      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
+      return null;
+    } else {
+      byte[] decoded = Base64.getDecoder().decode(encoded);
+      return new String(aes_dec_cipher.doFinal(decoded));
+    }
+  }
+
+
 
   @Override
   @Command
