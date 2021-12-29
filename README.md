@@ -5,6 +5,9 @@
 ### Secure Channel
 Do the chunks that are encrypted + decrypted need to be synchronized?
 i.e. is: (encrypt(line1) + encrypt(line2)) == encrypt(line1 + line2) ?
+
+- For Base64 definitely not. I also checked for AES encryption and it is also non-additive. If we need to send more lines over the secure channel, they are combined into one string with '\n', then encrypted and sent as one message.
+
 ### Message Client
 Is any sort of reconnection-feature intended? Or can "Mailbox Server ends connection" directly lead to client aborting? 
 
