@@ -87,13 +87,15 @@ public class MessageClient implements IMessageClient, Runnable {
 
     // read in "hmac.key" (the shared secret) from /keys/
     try {
-      // Creating the hash:
       Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
       hMac = Mac.getInstance(HASH_ALGORITHM);
       hMac.init(secretKey);
-    } catch (NoSuchAlgorithmException | InvalidKeyException | IOException e) {
-      System.err.println("HMAC init failed");
-      // TODO: Gracefully shutdown
+    } catch (IOException e) {
+      throw new ConfigError("The shared secret key could not be read");
+    } catch (NoSuchAlgorithmException e) {
+      throw new ImplError("HASH_ALGORITHM doesn't resolve to an available Algo");
+    } catch (InvalidKeyException e) {
+      throw new ConfigError("the shared secret (HMAC key) seems to be misconfigured");
     }
 
     // configure the shell
@@ -107,8 +109,9 @@ public class MessageClient implements IMessageClient, Runnable {
     try {
       connect_to_mailbox();
     } catch (ServerException e) {
-      shell.out().println("could not connect to the mailbox server: " + e.getMessage());
-      shutdown();
+      shell.out().println("mailbox server misbehaved while connecting: " + e.getMessage());
+    } catch (IOException e) {
+      shell.out().println("IO exception while connecting to the mailbox server");
     }
 
     try {
@@ -128,7 +131,11 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void shutdown() {
-    shutdown_initiated = true;
+    try {
+      disconnect_from_mailbox();
+    } catch (IOException e) {
+      shell.out().println("properly ending the connection to the mailbox server failed");
+    }
     // This will break the shell's read loop and make Shell.run() return gracefully.
     throw new StopShellException();
   }
@@ -138,28 +145,24 @@ public class MessageClient implements IMessageClient, Runnable {
   // tries to set up a connection to mb,
   // initializes reader + writer
   // checks for proper DMAP2.0 protocol start
-  void connect_to_mailbox() throws ServerException {
-    Socket conn = null;
-    try {
-      conn = new Socket(mailbox_addr.ip(), mailbox_addr.port());
-    } catch (IOException e) {
-      throw new UncheckedIOException("could not connect to configured Mailbox server", e);
+  void connect_to_mailbox() throws IOException, ServerException {
+    Socket conn = new Socket(mailbox_addr.ip(), mailbox_addr.port());
+    mb_writer = new PrintWriter(conn.getOutputStream(), true);
+    mb_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+    String server_line = mb_reader.readLine();
+
+    // Am I talking to a DMAP server?
+    if (server_line == null) {
+      throw new ServerException("mailbox server didn't send an initial message");
     }
-    try {
-      mb_writer = new PrintWriter(conn.getOutputStream(), true);
-      mb_reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    if (!"ok DMAP2.0".equals(server_line)) {
+      throw new ServerException("mailbox server's initial message was off");
+    }
+  }
+    }
 
-      String server_line = mb_reader.readLine();
 
-      // Am I talking to a DMAP server?
-      if (server_line == null) {
-        throw new ServerException("mailbox server didn't send an initial message");
-      }
-      if (!"ok DMAP2.0".equals(server_line)) {
-        throw new ServerException("mailbox server's initial message was off");
-      }
-    } catch (IOException e) {
-      throw new UncheckedIOException("IO exception during initial mailbox-server communication", e);
     }
   }
 
