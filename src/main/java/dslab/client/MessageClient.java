@@ -20,16 +20,13 @@ import org.apache.commons.logging.LogFactory;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
-import static dslab.util.DMTP_Utils.error;
 import static dslab.util.DMTP_Utils.printMsg;
 
 public class MessageClient implements IMessageClient, Runnable {
 
   private static final Log LOG = LogFactory.getLog(MessageClient.class);
 
-  private boolean shutdown_initiated = false;
   private final Shell shell;
   private final String HASH_ALGORITHM = "HmacSHA256";
   private Mac hMac; // gets initiated with the secret key in constructor.
@@ -82,7 +79,7 @@ public class MessageClient implements IMessageClient, Runnable {
       transfer_addr = new Addr_Info(config.getString("transfer.host"), config.getInt("transfer.port"));
       mailbox_addr = new Addr_Info(config.getString("mailbox.host"), config.getInt("mailbox.port"));
     } catch (UnknownHostException e) {
-      throw new ConfigException("The address information for either transfer or mailbox server seems to be misconfigured", e);
+      throw new ConfigError("The address information for either transfer or mailbox server seems to be misconfigured");
     }
     own_mail_addr = config.getString("transfer.email");
     mailbox_username = config.getString("mailbox.user");
@@ -107,14 +104,19 @@ public class MessageClient implements IMessageClient, Runnable {
 
   @Override
   public void run() {
-    connect_to_mailbox();
     try {
-      client_handshake();
-    }catch (IOException | HandshakeException e){
-      // TODO: Handle exceptions
-      LOG.error("oops something went wrong in the handshake");
+      connect_to_mailbox();
+    } catch (ServerException e) {
+      shell.out().println("could not connect to the mailbox server: " + e.getMessage());
+      shutdown();
     }
 
+    try {
+      client_handshake();
+    } catch (IOException | HandshakeException | ServerException e){
+      shell.out().println("could not establish a secure connection to the mailbox server: " + e.getMessage());
+      shutdown();
+    }
 
     // TODO:
     // "login"
@@ -136,7 +138,7 @@ public class MessageClient implements IMessageClient, Runnable {
   // tries to set up a connection to mb,
   // initializes reader + writer
   // checks for proper DMAP2.0 protocol start
-  void connect_to_mailbox() {
+  void connect_to_mailbox() throws ServerException {
     Socket conn = null;
     try {
       conn = new Socket(mailbox_addr.ip(), mailbox_addr.port());
@@ -151,10 +153,10 @@ public class MessageClient implements IMessageClient, Runnable {
 
       // Am I talking to a DMAP server?
       if (server_line == null) {
-        throw new ServerError("mailbox server didn't send an initial message");
+        throw new ServerException("mailbox server didn't send an initial message");
       }
       if (!"ok DMAP2.0".equals(server_line)) {
-        throw new ServerError("mailbox server's initial message was off");
+        throw new ServerException("mailbox server's initial message was off");
       }
     } catch (IOException e) {
       throw new UncheckedIOException("IO exception during initial mailbox-server communication", e);
@@ -164,13 +166,13 @@ public class MessageClient implements IMessageClient, Runnable {
   /**
    * wip
    */
-  void client_handshake() throws IOException, HandshakeException{
+  void client_handshake() throws IOException, HandshakeException, ServerException {
     printMsg(mb_writer, "startsecure");
 
     // comp_id <- parse "ok <component-id>"
     String server_line = mb_reader.readLine();
     if(!server_line.matches("^ok .+"))  // regex =^= "ok " + <something, at least one character>
-      throw new HandshakeException("Server did not answer with 'ok <component-id>' after 'startsecure' was sent");
+      throw new ServerException("Server did not answer with 'ok <component-id>' after 'startsecure' was sent");
     String mailbox_component_id = server_line.split(" ")[1];
 
     try {
@@ -219,11 +221,11 @@ public class MessageClient implements IMessageClient, Runnable {
       String decrypted_server_challenge = new String(aes_dec_cipher.doFinal(decoded_server_challenge));
 
       if(!"ok ".equals(decrypted_server_challenge.substring(0, 3))){
-        throw new HandshakeException("Server did not return a valid response after sending the challenge");
+        throw new ServerException("Server did not return a valid response after sending the challenge");
       }
 
       if(!challenge.equals(decrypted_server_challenge.split(" ")[1]))
-        throw new HandshakeException("challenges do not match");
+        throw new ServerException("challenges do not match");
 
       byte[] ok_encrypted = aes_enc_cipher.doFinal("ok".getBytes());
       String ok_encoded = Base64.getEncoder().encodeToString(ok_encrypted);
@@ -232,9 +234,8 @@ public class MessageClient implements IMessageClient, Runnable {
       mb_writer.flush();
 
       secure_channel_activated = true;
-
     } catch (BadPaddingException | IllegalBlockSizeException e) {
-      throw new HandshakeException("Bad padding or illegal block size in decrpytion",e);
+      throw new HandshakeException("Bad padding or illegal block size in decryption",e);
     } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
       throw new HandshakeException("Invalid key or invalid algorithm for the AES cypher",e);
     } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {

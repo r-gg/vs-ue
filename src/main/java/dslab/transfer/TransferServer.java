@@ -5,7 +5,7 @@ import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.shared_models.Addr_Info;
-import dslab.shared_models.ConfigException;
+import dslab.shared_models.ConfigError;
 import dslab.shared_models.DMTP_Message;
 import dslab.transfer.sub_thread.AcceptThread;
 import dslab.transfer.sub_thread.TransferThread;
@@ -62,7 +62,7 @@ public class TransferServer implements ITransferServer, Runnable {
     try {
       self_info = new Self_Info(self_config.getInt("tcp.port"));
     } catch (UnknownHostException e) {
-      throw new ConfigException("Could not figure out own IP address", e);
+      throw new ConfigError("Could not figure out own IP address");
     }
 
     // Read MonitorServer Info from Config
@@ -157,7 +157,7 @@ public class TransferServer implements ITransferServer, Runnable {
       try {
         addr = new Addr_Info(temp2[0], Integer.parseInt(temp2[1]));
       } catch (UnknownHostException e) {
-        throw new ConfigException("The domains.properties file seems to be faulty.", e);
+        throw new ConfigError("The domains.properties file seems to be faulty.");
       }
 
       res.put(k, addr);
