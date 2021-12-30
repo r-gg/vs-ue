@@ -11,7 +11,6 @@ import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
-import dslab.mailbox.sub_threads.DMAP_Thread;
 import dslab.shared_models.*;
 import dslab.util.Config;
 import dslab.util.Keys;
@@ -121,8 +120,7 @@ public class MessageClient implements IMessageClient, Runnable {
       shutdown();
     }
 
-    // TODO:
-    // "login"
+    login();
 
     // NB: once shell runs, it masks (certain?) Errors thrown by the MessageClient thread
     shell.run();
@@ -160,10 +158,23 @@ public class MessageClient implements IMessageClient, Runnable {
       throw new ServerException("mailbox server's initial message was off");
     }
   }
+
+  /**
+   * precondition: the secure channel has been activated
+   * ends the mailbox connection (as per DMAP) and closes the connection
+   */
+  void disconnect_from_mailbox() throws IOException {
+    if (!secure_channel_activated) {
+      throw new ImplError("precondition breached");
     }
 
+    printMsg(mb_writer, encipher("quit"));
 
+    String server_line = mb_reader.readLine();
+    if (server_line == null || !"ok bye".equals(decipher(server_line))){
+      shell.out().println("The mailbox server did not end the connection according to protocol");
     }
+    mb_reader.close(); // This also closes the underlying socket (see e.g. https://stackoverflow.com/q/484925/)
   }
 
   /**
@@ -289,6 +300,10 @@ public class MessageClient implements IMessageClient, Runnable {
     }
   }
 
+
+  void login() {
+    // TODO
+  }
 
 
   @Override
