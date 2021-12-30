@@ -111,16 +111,22 @@ public class MessageClient implements IMessageClient, Runnable {
       shell.out().println("mailbox server misbehaved while connecting: " + e.getMessage());
     } catch (IOException e) {
       shell.out().println("IO exception while connecting to the mailbox server");
+      // todo: shutdown...
+      // but probably not via "shutdown()", because that assumes we were connected in the first place
     }
 
     try {
       client_handshake();
     } catch (IOException | HandshakeException | ServerException e){
       shell.out().println("could not establish a secure connection to the mailbox server: " + e.getMessage());
-      shutdown();
+      // see comment above
     }
 
-    login();
+    try {
+      login();
+    } catch (ServerException | IOException e) {
+      // notify user
+    }
 
     // NB: once shell runs, it masks (certain?) Errors thrown by the MessageClient thread
     shell.run();
@@ -300,9 +306,12 @@ public class MessageClient implements IMessageClient, Runnable {
     }
   }
 
-
-  void login() {
-    // TODO
+  void login () throws IOException, ServerException {
+    printMsg(mb_writer, encipher("login " + mailbox_username + " " + mailbox_password));
+    String server_line = decipher(mb_reader.readLine());
+    if (!"ok".equals(server_line)){
+      throw new ServerException("login failed, server said: " + server_line);
+    }
   }
 
 
@@ -346,7 +355,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
 
   final String connection_ended_str = "error server ended connection prematurely";
-  final String protocol_error_str = "error server committed a DMTP protocol error";
+  final String protocol_error_str = "error server committed a protocol error";
 
   /**
    * Parse a mail and try to send it to the configured transfer server.
@@ -474,7 +483,7 @@ public class MessageClient implements IMessageClient, Runnable {
   // (which non-exception-throwing functions could not avoid)
   /**
    * @param server_line is checked for being exactly "ok" (and not null)
-   * @throws ServerException with a meaningful (for DMTP) details-message
+   * @throws ServerException with a meaningful (for DMTP/DMAP) details-message
    */
   private void ok_guard(String server_line) throws ServerException {
     not_null_guard(server_line);
