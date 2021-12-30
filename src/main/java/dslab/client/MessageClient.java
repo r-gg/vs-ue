@@ -358,7 +358,7 @@ public class MessageClient implements IMessageClient, Runnable {
       try {
         // and try to send the mail
         result = play_DMTP2(transfer_writer, transfer_reader, msg);
-      } catch (ServerError se) {
+      } catch (ServerException se) {
         shell.out().println(se.getMessage());
         return;
       } catch (IOException e) {
@@ -376,16 +376,16 @@ public class MessageClient implements IMessageClient, Runnable {
    * go through DMTP2.0, i.e. send off the DMTP_Message if everything goes right.
    *
    * @return "ok" if everything goes right, "error <something>" if the server sent a protocol-conforming error
-   * @throws ServerError if the server violated the DMTP2.0 protocol or ended the connection
+   * @throws ServerException if the server violated the DMTP2.0 protocol or ended the connection
    * @throws IOException if any of the read/write socket operations failed
    */
-  private String play_DMTP2(PrintWriter out, BufferedReader in, DMTP_Message msg) throws ServerError, IOException {
+  private String play_DMTP2(PrintWriter out, BufferedReader in, DMTP_Message msg) throws ServerException, IOException {
 
     // Am I talking to a DMTP server?
     String server_line = in.readLine();
     not_null_guard(server_line);
     if (!"ok DMTP2.0".equals(server_line)) {
-      throw new ServerError("transfer server's initial message was off");
+      throw new ServerException("transfer server's initial message was off");
     }
 
     out.println("begin");
@@ -433,7 +433,7 @@ public class MessageClient implements IMessageClient, Runnable {
     server_line = in.readLine();
     not_null_guard(server_line);
     if (!"ok bye".equals(server_line)) {
-      throw new ServerError(protocol_error_str);
+      throw new ServerException(protocol_error_str);
     }
 
     // sending finished
@@ -448,17 +448,17 @@ public class MessageClient implements IMessageClient, Runnable {
   // (which non-exception-throwing functions could not avoid)
   /**
    * @param server_line is checked for being exactly "ok" (and not null)
-   * @throws ServerError with a meaningful (for DMTP) details-message
+   * @throws ServerException with a meaningful (for DMTP) details-message
    */
-  private void ok_guard(String server_line) throws ServerError {
+  private void ok_guard(String server_line) throws ServerException {
     not_null_guard(server_line);
     if (!"ok".equals(server_line)) {
-      throw new ServerError(protocol_error_str);
+      throw new ServerException(protocol_error_str);
     }
   }
-  private void not_null_guard(String server_line) throws ServerError {
+  private void not_null_guard(String server_line) throws ServerException {
     if (server_line == null) {
-      throw new ServerError(connection_ended_str);
+      throw new ServerException(connection_ended_str);
     }
   }
 
