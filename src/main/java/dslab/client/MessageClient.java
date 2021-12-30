@@ -166,47 +166,44 @@ public class MessageClient implements IMessageClient, Runnable {
    */
   void client_handshake() throws IOException, HandshakeException{
     printMsg(mb_writer, "startsecure");
-    // TODO:
-    // comp_id <- parse "ok <component-id>"
 
+    // comp_id <- parse "ok <component-id>"
     String server_line = mb_reader.readLine();
-    if(!server_line.startsWith("ok "))
-      throw new HandshakeException("Server did not answer with ok after 'startsecure' was sent");
+    if(!server_line.matches("^ok .+"))  // regex =^= "ok " + <something, at least one character>
+      throw new HandshakeException("Server did not answer with 'ok <component-id>' after 'startsecure' was sent");
     String mailbox_component_id = server_line.split(" ")[1];
 
-
-    // pubkey <- get_pubkey(comp_id)
-    // challenge <- 32 random bytes
-    // "initialize an AES cipher, by"
-    // new secret key
-    // new iv
-    // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
-    try{
-
+    try {
+      // pubkey <- get_pubkey(comp_id)
       Cipher rsa_cipher = Cipher.getInstance(ALGORITHM_RSA);
       PublicKey publicKey = Keys.readPublicKey(new File("keys/client/"+ mailbox_component_id +"_pub.der"));
       rsa_cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
+      // new iv
+      SecureRandom secureRandom = new SecureRandom();
+      final byte[] iv_bytes = new byte[16];
+      secureRandom.nextBytes(iv_bytes);
+      IvParameterSpec iv = new IvParameterSpec(iv_bytes);
+
+      // generate new secret key
       KeyGenerator generator = KeyGenerator.getInstance("AES");
       generator.init(256);
       custom_aes_key = generator.generateKey();
 
-      SecureRandom secureRandom = new SecureRandom();
-      final byte[] iv_bytes = new byte[16];
-      secureRandom.nextBytes(iv_bytes);
-
-      IvParameterSpec iv = new IvParameterSpec(iv_bytes);
-
+      // initialize an AES cipher
       aes_enc_cipher = Cipher.getInstance(ALGORITHM_AES);
       aes_enc_cipher.init(Cipher.ENCRYPT_MODE, custom_aes_key, iv);
 
       aes_dec_cipher = Cipher.getInstance(ALGORITHM_AES);
       aes_dec_cipher.init(Cipher.DECRYPT_MODE, custom_aes_key, iv);
 
-      String challenge = "challlenge";
+      // challenge <- 32 random bytes
+      // TODO: make random
+      String challenge = "challenge";
+
+      // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
       String req_plain = String.join(" ", "ok", challenge, Base64.getEncoder().encodeToString(custom_aes_key.getEncoded()),
               Base64.getEncoder().encodeToString(iv_bytes));
-
       byte[] challenge_encrypted = rsa_cipher.doFinal(req_plain.getBytes());
       String challenge_encoded = Base64.getEncoder().encodeToString(challenge_encrypted);
 
@@ -218,7 +215,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
       // decode
       byte[] decoded_server_challenge = Base64.getDecoder().decode(server_line);
-      //decrypt
+      // decrypt
       String decrypted_server_challenge = new String(aes_dec_cipher.doFinal(decoded_server_challenge));
 
       if(!"ok ".equals(decrypted_server_challenge.substring(0, 3))){
@@ -243,10 +240,8 @@ public class MessageClient implements IMessageClient, Runnable {
     } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
       throw new HandshakeException("The algorithm or padding used for initializing the AES cypher was not found",e);
     } catch (IllegalArgumentException e) {
-      throw new HandshakeException("Invalid agrument when decoding b64",e);
+      throw new HandshakeException("Invalid argument when decoding b64",e);
     }
-
-
   }
 
   /**
