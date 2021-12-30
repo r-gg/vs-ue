@@ -246,36 +246,43 @@ public class MessageClient implements IMessageClient, Runnable {
   }
 
   /**
-   * If secure channel has been confirmed, the method encrypts and encodes the message with the shared secret key and base64 encoding.
-   * The result of the method is the encrypted and encoded message which can be sent via the socket.
+   * precondition: secure channel has been confirmed
+   * The method encrypts and encodes the message with the shared secret key and base64 encoding.
    *
-   * @param message to be encryped and encoded
-   * @return string with the encryped and then encoded message if the secure channel was started, otherwise null
+   * @param message to be encrypted and encoded
+   * @return the resulting string which can be sent via the socket.
    */
-  private String encipher(String message) throws IllegalBlockSizeException, BadPaddingException {
+  private String encipher(String message) {
     if (!secure_channel_activated || aes_enc_cipher == null) {
-      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
-      return null;
-    } else {
-      byte[] encrypted = aes_enc_cipher.doFinal(message.getBytes());
-      return Base64.getEncoder().encodeToString(encrypted);
+      throw new ImplError("encipher called without initiating secure channel or one of the ciphers is null");
     }
+
+    byte[] encrypted = new byte[0];
+    try {
+      encrypted = aes_enc_cipher.doFinal(message.getBytes());
+    } catch (IllegalBlockSizeException | BadPaddingException e) {
+      throw new ImplError("in encipher: " + e.getMessage());
+    }
+    return Base64.getEncoder().encodeToString(encrypted);
   }
 
   /**
-   * If secure channel has been confirmed, the method decodes and decrypts the message with the shared secret key and base64 encoding.
-   * The result of the method is the decoded and decrypted message which can be further interpreted by the server side protocol resolver.
+   * precondition: secure channel has been confirmed
+   * The method decodes and decrypts the message with base64 decoding and the shared secret key.
    *
    * @param encoded message which is also encrypted
-   * @return string with the plain text message if the secure channel was started, otherwise null
+   * @return plaintext string which can be further interpreted by the server side protocol resolver.
    */
-  private String decipher(String encoded) throws IllegalBlockSizeException, BadPaddingException {
-    if (!secure_channel_activated || aes_dec_cipher == null) {
-      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
-      return null;
-    } else {
-      byte[] decoded = Base64.getDecoder().decode(encoded);
+  private String decipher(String encoded) {
+    if (!secure_channel_activated || aes_enc_cipher == null) {
+      throw new ImplError("decipher called without initiating secure channel or one of the ciphers is null");
+    }
+
+    byte[] decoded = Base64.getDecoder().decode(encoded);
+    try {
       return new String(aes_dec_cipher.doFinal(decoded));
+    } catch (IllegalBlockSizeException | BadPaddingException e) {
+      throw new ImplError("in decipher: " + e.getMessage());
     }
   }
 
