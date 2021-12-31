@@ -137,7 +137,9 @@ public class MessageClient implements IMessageClient, Runnable {
     try {
       disconnect_from_mailbox();
     } catch (IOException e) {
-      shell.out().println("properly ending the connection to the mailbox server failed");
+      shell.out().println("IOException while ending connection to mailbox server:\n" + e.getMessage());
+    } catch (ServerException e) {
+      shell.out().println("mailbox server misbehaved while disconnecting:\n" + e.getMessage());
     }
     // This will break the shell's read loop and make Shell.run() return gracefully.
     throw new StopShellException();
@@ -168,7 +170,7 @@ public class MessageClient implements IMessageClient, Runnable {
    * precondition: the secure channel has been activated
    * ends the mailbox connection (as per DMAP) and closes the connection
    */
-  void disconnect_from_mailbox() throws IOException {
+  void disconnect_from_mailbox() throws IOException, ServerException {
     if (!secure_channel_activated) {
       throw new ImplError("precondition breached");
     }
@@ -177,7 +179,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
     String server_line = mb_reader.readLine();
     if (server_line == null || !"ok bye".equals(decipher(server_line))){
-      shell.out().println("The mailbox server did not end the connection according to protocol");
+      throw new ServerException("The mailbox server did not end the connection according to protocol");
     }
     mb_reader.close(); // This also closes the underlying socket (see e.g. https://stackoverflow.com/q/484925/)
   }
