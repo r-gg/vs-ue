@@ -4,8 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.*;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
 
 import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.StopShellException;
@@ -292,8 +291,9 @@ public class MessageClient implements IMessageClient, Runnable {
    *
    * @param encoded message which is also encrypted
    * @return plaintext string which can be further interpreted by the server side protocol resolver.
+   * @throws ServerException if the input was not encoded in a valid way ("bad block size" or "bad padding")
    */
-  private String decipher(String encoded) {
+  private String decipher(String encoded) throws ServerException {
     if (!secure_channel_activated || aes_enc_cipher == null) {
       throw new ImplError("decipher called without initiating secure channel or one of the ciphers is null");
     }
@@ -302,7 +302,9 @@ public class MessageClient implements IMessageClient, Runnable {
     try {
       return new String(aes_dec_cipher.doFinal(decoded));
     } catch (IllegalBlockSizeException | BadPaddingException e) {
-      throw new ImplError("in decipher: " + e.getMessage());
+      throw new ServerException("error could not decipher \"" + encoded + "\": " + e.getMessage());
+      // logging/bubbling up the incoming data could actually be a security risk.
+      // at least if Log4j were involved https://de.wikipedia.org/wiki/Log4j#Bekanntwerden_einer_Sicherheitsl%C3%BCcke_im_Dezember_2021.
     }
   }
 
