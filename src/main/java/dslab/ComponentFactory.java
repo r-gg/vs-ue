@@ -8,6 +8,7 @@ import dslab.monitoring.IMonitoringServer;
 import dslab.monitoring.MonitoringServer;
 import dslab.nameserver.INameserver;
 import dslab.nameserver.Nameserver;
+import dslab.nameserver.RootNameserver;
 import dslab.transfer.ITransferServer;
 import dslab.transfer.TransferServer;
 import dslab.util.Config;
@@ -97,6 +98,9 @@ public final class ComponentFactory {
      */
 
     Config config = new Config(componentId);
+    if (componentId.equals("ns-root")){
+      return new RootNameserver(componentId, config, in, out);
+    }
     return new Nameserver(componentId, config, in, out);
   }
 
