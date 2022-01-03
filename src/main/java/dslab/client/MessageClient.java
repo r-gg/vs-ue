@@ -12,6 +12,7 @@ import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.shared_models.*;
 import dslab.util.Config;
+import dslab.util.InputChecker;
 import dslab.util.Keys;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -394,7 +395,7 @@ public class MessageClient implements IMessageClient, Runnable {
         switch (command) {
           case "to":
             if (content.isEmpty()) {
-              shell.out().println(protocol_error_str + " (no subject on a msg)");
+              shell.out().println(protocol_error_str + " (empty 'to' on a msg)");
               return;
             } else {
               try {
@@ -406,14 +407,22 @@ public class MessageClient implements IMessageClient, Runnable {
             }
             break;
           case "from":
-            // TODO
+            if (content.isEmpty() || !InputChecker.is_mail_address(content.get())) {
+              shell.out().println(protocol_error_str + " (invalid 'from' on a msg)");
+              return;
+            } else {
+              new_msg.sender = content.get();
+            }
             break;
           case "subject":
+            new_msg.subject = content.orElse("");
             break;
           case "data":
+            new_msg.text_body = content.orElse("");
             break;
           case "hash":
-            break;
+              new_msg.hash = content.orElse("");
+          break;
         }
       }
       if (DMTP_Message.collectProblems(new_msg).size() != 0) {
