@@ -318,15 +318,57 @@ public class MessageClient implements IMessageClient, Runnable {
     }
   }
 
-
   @Override
   @Command
   public void inbox() {
-    // TODO
-    // 1) "list" inbox content
-    // 2) parse -> List<DMTP_Msg> w/ many holes
-    // 3) for each msg: "show" -> parse -> fill holes
-    // 4) pretty print each message inbox (format not specified)
+    // "list" inbox content
+    printMsg(mb_writer, encipher("list"));
+    String server_response;
+    try {
+      server_response = mb_reader.readLine();
+      not_null_guard(server_response);
+    } catch (IOException e) {
+      shell.out().println("error with the mailbox-connection:\n" + e.getMessage());
+      return;
+    } catch (ServerException e) {
+      shell.out().println(e.getMessage());
+      return;
+    }
+    // decipher + parse "list" response
+    // parse result: a map with all message-ids as keys, nulls as values
+    HashMap<Integer, DMTP_Message> inbox = new HashMap<>();
+    String plaintext;
+    try {
+      plaintext = decipher(server_response);
+    } catch (ServerException e) {
+      shell.out().println(e.getMessage());
+      return;
+    }
+    String[] lines = plaintext.split("\\n");
+    for (String l : lines){
+      if ("ok".equals(l)) {
+        // end of list reached / nop
+        break;
+      }
+
+      // pick first part from "<message-id> <sender> <subject>"
+      String[] l_parts = l.split("\\s");
+      if (l_parts.length < 3) {
+        shell.out().println(protocol_error_str + " in it's response to the 'list' command");
+        return;
+      }
+      int msg_id;
+      try { msg_id = Integer.parseInt(l_parts[0]); }
+      catch (NumberFormatException nfe) {
+        shell.out().println(protocol_error_str + ", namely by using a non-number message id");
+        return;
+      }
+      inbox.put(msg_id, null);
+    }
+
+    // for each msg_id: "show <msg_id>"; parse full message
+
+    // pretty print each message inbox (format not specified)
   }
 
   @Override
