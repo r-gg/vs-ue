@@ -319,17 +319,7 @@ public class DMAP_Thread extends MB_Thread {
           var mby_msg = inbox.get(id.getAsInt());
           if (mby_msg.isPresent()) {
             var msg = mby_msg.get();
-            String details = "from " + msg.sender + "\n"
-                + "to " + String.join(",", msg.recipients) + "\n"
-                + "subject " + msg.subject + "\n"
-                + "data " + msg.text_body + "\n"
-                + "hash " + ((msg.hash != null) ? msg.hash : "");
-            printMsg(them, encipher_mby(details));
-//            them.println("from " + msg.sender);
-//            them.println("to " + String.join(",", msg.recipients));
-//            them.println("subject " + msg.subject);
-//            them.println("data " + msg.text_body);
-            //them.flush();
+            printMsg(them, encipher_mby(msg.toString()));
           } else {
             printMsg(them, encipher_mby("error unknown message id"));
           }

@@ -64,7 +64,20 @@ public class DMTP_Message {
   }
 
   /**
-   * returns a "canonical" string representation of the Message (for Hashing purposes):
+   * @return a String representation of the Message as DMAP's "show" would print it
+   * (and as DMTP would set the message, if every line is read as a command)
+   */
+  @Override
+  public String toString() {
+    return "from " + this.sender + "\n"
+        + "to " + String.join(",", this.recipients) + "\n"
+        + "subject " + this.subject + "\n"
+        + "data " + this.text_body + "\n"
+        + "hash " + ((this.hash == null) ? "" : this.hash);
+  }
+
+  /**
+   * @return a "canonical" string representation of the Message (for Hashing purposes):
    * The _contents_ of the fields
    * in the order: from, to, subject, data
    * separated by newlines
