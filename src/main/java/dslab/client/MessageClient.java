@@ -425,10 +425,12 @@ public class MessageClient implements IMessageClient, Runnable {
           break;
         }
       }
-      if (DMTP_Message.collectProblems(new_msg).size() != 0) {
+
+      if (DMTP_Message.collectProblems(new_msg).size() == 0) {
+        inbox.put(msg_id, new_msg);
+      } else {
         shell.out().println("msg " + msg_id + " had problems" );
       }
-
     }
 
     // pretty print each message inbox (format not specified)
