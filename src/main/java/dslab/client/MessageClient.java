@@ -423,6 +423,10 @@ public class MessageClient implements IMessageClient, Runnable {
     }
 
     // pretty print each message inbox (format not specified)
+    for (var mapping: inbox.entrySet()) {
+      shell.out().println("message #" + mapping.getKey() + ":");
+      shell.out().println(mapping.getValue().toString());
+    }
   }
 
   @Override
