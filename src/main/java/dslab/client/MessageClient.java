@@ -19,7 +19,7 @@ import org.apache.commons.logging.LogFactory;
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 
-import static dslab.util.DMTP_Utils.printMsg;
+import static dslab.util.DMTP_Utils.*;
 
 public class MessageClient implements IMessageClient, Runnable {
 
@@ -321,12 +321,13 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void inbox() {
-    // "list" inbox content
+    // "list" inbox content, decipher response
     printMsg(mb_writer, encipher("list"));
-    String server_response;
+    String plaintext;
     try {
-      server_response = mb_reader.readLine();
-      not_null_guard(server_response);
+      String list_response = mb_reader.readLine();
+      not_null_guard(list_response);
+      plaintext = decipher(list_response);
     } catch (IOException e) {
       shell.out().println("error with the mailbox-connection:\n" + e.getMessage());
       return;
@@ -334,16 +335,10 @@ public class MessageClient implements IMessageClient, Runnable {
       shell.out().println(e.getMessage());
       return;
     }
-    // decipher + parse "list" response
+    // parse "list" response
     // parse result: a map with all message-ids as keys, nulls as values
     HashMap<Integer, DMTP_Message> inbox = new HashMap<>();
-    String plaintext;
-    try {
-      plaintext = decipher(server_response);
-    } catch (ServerException e) {
-      shell.out().println(e.getMessage());
-      return;
-    }
+
     String[] lines = plaintext.split("\\n");
     for (String l : lines){
       if ("ok".equals(l)) {
@@ -360,13 +355,72 @@ public class MessageClient implements IMessageClient, Runnable {
       int msg_id;
       try { msg_id = Integer.parseInt(l_parts[0]); }
       catch (NumberFormatException nfe) {
-        shell.out().println(protocol_error_str + ", namely by using a non-number message id");
+        shell.out().println(protocol_error_str + " (a non-number as message-id)");
         return;
       }
       inbox.put(msg_id, null);
     }
 
-    // for each msg_id: "show <msg_id>"; parse full message
+    // for each msg_id
+    for (Integer msg_id: inbox.keySet()) {
+      // "show <msg_id>"
+      printMsg(mb_writer, encipher("show " + msg_id));
+
+      // read + decipher response
+      String show_resp_plain;
+      try {
+        String show_response = mb_reader.readLine();
+        not_null_guard(show_response);
+        show_resp_plain = decipher(show_response);
+      } catch (IOException e) {
+        shell.out().println("error with the mailbox-connection:\n" + e.getMessage());
+        return;
+      } catch (ServerException e) {
+        shell.out().println(e.getMessage());
+        return;
+      }
+
+      // parse plaintext
+      DMTP_Message new_msg = new DMTP_Message();
+      String[] show_lines = show_resp_plain.split("\\n");
+      for (String l : show_lines) {
+        var cmd_cntnt = split_cmd_cntnt(l);
+        if (cmd_cntnt.isEmpty()) {
+          shell.out().println(protocol_error_str);
+          return;
+        }
+        String command = cmd_cntnt.get().left;
+        Optional<String> content = cmd_cntnt.get().right;
+        switch (command) {
+          case "to":
+            if (content.isEmpty()) {
+              shell.out().println(protocol_error_str + " (no subject on a msg)");
+              return;
+            } else {
+              try {
+                new_msg.set_recips_by_string(content.get());
+              } catch (FormatException e) {
+                shell.out().println(protocol_error_str + " (invalid 'to' field on a msg)");
+                return;
+              }
+            }
+            break;
+          case "from":
+            // TODO
+            break;
+          case "subject":
+            break;
+          case "data":
+            break;
+          case "hash":
+            break;
+        }
+      }
+      if (DMTP_Message.collectProblems(new_msg).size() != 0) {
+        shell.out().println("msg " + msg_id + " had problems" );
+      }
+
+    }
 
     // pretty print each message inbox (format not specified)
   }
