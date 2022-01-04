@@ -443,7 +443,7 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void delete(String id) {
-    printMsg(mb_writer, "delete " + id);
+    printMsg(mb_writer, encipher("delete " + id));
     String response_plain;
     try {
       String response = mb_reader.readLine();
