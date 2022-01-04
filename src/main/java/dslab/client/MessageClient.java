@@ -272,7 +272,7 @@ public class MessageClient implements IMessageClient, Runnable {
    * The method encrypts and encodes the message with the shared secret key and base64 encoding.
    *
    * @param message to be encrypted and encoded
-   * @return the resulting string which can be sent via the socket.
+   * @return the resulting string which can be sent via the socket
    */
   private String encipher(String message) {
     if (!secure_channel_activated || aes_enc_cipher == null) {

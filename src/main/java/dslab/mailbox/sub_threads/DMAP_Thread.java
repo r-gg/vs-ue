@@ -12,7 +12,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import dslab.mailbox.Inbox;
 import dslab.mailbox.models.MB_Thread;
+import dslab.shared_models.ConfigError;
 import dslab.shared_models.ConnectionEnd;
+import dslab.shared_models.ImplError;
+import dslab.shared_models.ServerException;
 import dslab.util.Keys;
 import dslab.util.Pair;
 import org.apache.commons.logging.Log;
@@ -63,9 +66,9 @@ public class DMAP_Thread extends MB_Thread {
         rsa_dec_cipher = Cipher.getInstance(ALGORITHM_RSA);
         rsa_dec_cipher.init(Cipher.DECRYPT_MODE, pk);
       } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-        System.err.println("No Such Algorithm or padding in DMAP, failed to create the cipher");
+        throw new ConfigError("No Such Algorithm or padding in DMAP, failed to create the cipher");
       } catch (InvalidKeyException e) {
-        System.err.println("Sorry the key is invalid, could not initialize the cipher");
+        throw new ConfigError("Sorry the key is invalid, could not initialize the cipher");
       }
 
 
@@ -78,8 +81,15 @@ public class DMAP_Thread extends MB_Thread {
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
 
-        if (state == HandshakeState.CONFIRMED && aes_dec_cipher != null) {
-          inc_line = decipher(inc_line);
+        if (state == HandshakeState.CONFIRMED) {
+          try {
+            inc_line = decipher(inc_line);
+          } catch (ServerException e) {
+            LOG.info("after establishing a secure channel, a client sent a improperly encrypted+encoded line");
+            // -> break out of the loop to abort the connection
+            // (assignment explicitly says to not send an error message during the handshake, )
+            break;
+          }
         }
 
         var parsed = split_cmd_cntnt(inc_line);
@@ -99,15 +109,12 @@ public class DMAP_Thread extends MB_Thread {
     } catch (SocketException e) {
       // when the socket is closed, the I/O methods of the Socket will throw a SocketException
       // almost all SocketException cases indicate that the socket was closed
-      System.out.println("SocketException while handling socket:\n" + e.getMessage());
+      LOG.error("SocketException while handling socket:\n" + e.getMessage());
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...
       // ... but creating reader + writer may have something to do with it.
       throw new UncheckedIOException(e);
-    } catch (IllegalBlockSizeException | BadPaddingException e) {
-      LOG.error("Illegal block size or bad padding while enciphering or deciphering");
-
     } finally {
       if (socket != null && !socket.isClosed()) {
         try {
@@ -190,7 +197,7 @@ public class DMAP_Thread extends MB_Thread {
       }
 
     } catch (BadPaddingException | IllegalBlockSizeException e) {
-      LOG.error("Bad padding or illegal block size in decrpytion");
+      LOG.error("Bad padding or illegal block size in decryption");
       throw new ConnectionEnd();
     } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
       LOG.error("Invalid key or invalid algorithm for the AES cypher");
@@ -199,7 +206,7 @@ public class DMAP_Thread extends MB_Thread {
       LOG.error("The algorithm or padding used for initializing the AES cypher was not found");
       throw new ConnectionEnd();
     } catch (IllegalArgumentException e) {
-      LOG.error("Invalid agrument when decoding b64");
+      LOG.error("Invalid argument when decoding b64");
       throw new ConnectionEnd();
     }
 
@@ -207,36 +214,47 @@ public class DMAP_Thread extends MB_Thread {
   }
 
   /**
-   * If secure channel has been confirmed, the method encrypts and encodes the message with the shared secret key and base64 encoding.
-   * The result of the method is the encrypted and encoded message which can be sent via the socket.
+   * precondition: The secure channel has been confirmed
+   * The method encrypts and encodes the message with the shared secret key and base64 encoding.
    *
-   * @param message to be encryped and encoded
-   * @return string with the encryped and then encoded message if the secure channel was started, otherwise null
+   * @param message to be encrypted and encoded
+   * @return the resulting string which can be sent via the socket
    */
-  private String encipher(String message) throws IllegalBlockSizeException, BadPaddingException {
+  private String encipher(String message) {
     if (state != HandshakeState.CONFIRMED || aes_enc_cipher == null) {
-      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
-      return null;
+      throw new ImplError("Encrypt called without initiating secure channel or the cipher is null");
     } else {
-      byte[] encrypted = aes_enc_cipher.doFinal(message.getBytes());
+      byte[] encrypted;
+      try {
+        encrypted = aes_enc_cipher.doFinal(message.getBytes());
+      } catch (IllegalBlockSizeException | BadPaddingException e) {
+        throw new ImplError("in encipher: " + e.getMessage());
+      }
       return Base64.getEncoder().encodeToString(encrypted);
     }
   }
 
   /**
-   * If secure channel has been confirmed, the method decodes and decrypts the message with the shared secret key and base64 encoding.
-   * The result of the method is the decoded and decrypted message which can be further interpreted by the server side protocol resolver.
+   * precondition: secure channel has been confirmed
+   * The method decodes and decrypts the message with base64 decoding and the shared secret key.
    *
    * @param encoded message which is also encrypted
-   * @return string with the plain text message if the secure channel was started, otherwise null
+   * @return string with the plain text message
+   * @throws ServerException if the input was not encoded in a valid way ("bad block size" or "bad padding")
+   *
    */
-  private String decipher(String encoded) throws IllegalBlockSizeException, BadPaddingException {
+  private String decipher(String encoded) throws ServerException {
     if (state != HandshakeState.CONFIRMED || aes_dec_cipher == null) {
-      LOG.error("Encrypt called without initiating secure channel or one of the ciphers is null");
-      return null;
-    } else {
+      throw new ImplError("decipher called without initiating secure channel or the ciphers is null");
+    }
+
+    try {
       byte[] decoded = Base64.getDecoder().decode(encoded);
       return new String(aes_dec_cipher.doFinal(decoded));
+    } catch (IllegalArgumentException | IllegalBlockSizeException | BadPaddingException e) {
+      throw new ServerException("error could not decipher \"" + encoded + "\": " + e.getMessage());
+      // logging/bubbling up the incoming data could actually be a security risk.
+      // at least if Log4j were involved https://de.wikipedia.org/wiki/Log4j#Bekanntwerden_einer_Sicherheitsl%C3%BCcke_im_Dezember_2021.
     }
   }
 
@@ -252,7 +270,7 @@ public class DMAP_Thread extends MB_Thread {
    * @throws ConnectionEnd in all cases where the protocol demands it
    */
   private Inbox handle_line(PrintWriter them, Inbox inbox, String command,
-                            Optional<String> content, BufferedReader reader) throws ConnectionEnd, IOException, IllegalBlockSizeException, BadPaddingException {
+                            Optional<String> content, BufferedReader reader) throws ConnectionEnd, IOException {
     if (inbox == null) {
       switch (command) {
         case "login":
@@ -379,7 +397,7 @@ public class DMAP_Thread extends MB_Thread {
    * @param str which may get encrypted
    * @return either
    */
-  private String encipher_mby(String str) throws IllegalBlockSizeException, BadPaddingException {
+  private String encipher_mby(String str) {
     return (state == HandshakeState.CONFIRMED) ? encipher(str) : str;
   }
 }
