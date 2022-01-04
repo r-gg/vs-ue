@@ -5,6 +5,7 @@ import dslab.util.Config;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.rmi.AlreadyBoundException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -31,8 +32,18 @@ public class RootNameserver extends Nameserver implements INameserver{
         try {
             registry = LocateRegistry.createRegistry(config.getInt("port"));
             INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
-            registry.bind(config.getString("root_id"), this);
+            registry.bind(config.getString("root_id"), remoteobject);
         } catch (RemoteException | AlreadyBoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void shutdown() {
+        super.shutdown();
+        try {
+            UnicastRemoteObject.unexportObject(registry, true);
+        } catch (NoSuchObjectException e) {
             e.printStackTrace();
         }
     }
