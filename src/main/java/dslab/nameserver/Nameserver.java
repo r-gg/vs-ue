@@ -140,9 +140,7 @@ public class Nameserver implements INameserver, INameserverRemote {
     }
     String[] domainParts = domain.split("\\.");
     String[] newDomainParts = new String[domainParts.length-this.domain.length];
-    for (int i = 0; i < newDomainParts.length; i++) {
-      newDomainParts[i] = domainParts[i];
-    }
+    System.arraycopy(domainParts, 0, newDomainParts, 0, newDomainParts.length);
     return newDomainParts;
   }
 
