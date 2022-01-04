@@ -58,7 +58,6 @@ public class DMAP_Thread extends MB_Thread {
       String inc_line;
 
       // Initialize the private key and the cipher
-      // TODO: read in the appropriate key based on the Mailbox-Server's component-id
       pk = Keys.readPrivateKey(new File("keys/server/"+componentId+".der"));
       try {
         rsa_dec_cipher = Cipher.getInstance(ALGORITHM_RSA);
