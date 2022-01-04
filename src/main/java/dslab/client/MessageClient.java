@@ -301,10 +301,10 @@ public class MessageClient implements IMessageClient, Runnable {
       throw new ImplError("decipher called without initiating secure channel or one of the ciphers is null");
     }
 
-    byte[] decoded = Base64.getDecoder().decode(encoded);
     try {
+      byte[] decoded = Base64.getDecoder().decode(encoded);
       return new String(aes_dec_cipher.doFinal(decoded));
-    } catch (IllegalBlockSizeException | BadPaddingException e) {
+    } catch (IllegalArgumentException | IllegalBlockSizeException | BadPaddingException e) {
       throw new ServerException("error could not decipher \"" + encoded + "\": " + e.getMessage());
       // logging/bubbling up the incoming data could actually be a security risk.
       // at least if Log4j were involved https://de.wikipedia.org/wiki/Log4j#Bekanntwerden_einer_Sicherheitsl%C3%BCcke_im_Dezember_2021.
