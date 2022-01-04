@@ -443,8 +443,20 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void delete(String id) {
-    // TODO
-    shell.out().println(id);
+    printMsg(mb_writer, "delete " + id);
+    String response_plain;
+    try {
+      String response = mb_reader.readLine();
+      not_null_guard(response);
+      response_plain = decipher(response);
+    } catch (IOException e) {
+      shell.out().println("error - IO exception occurred while communicating with the mailbox server");
+      return;
+    } catch (ServerException e) {
+      shell.out().println(e.getMessage());
+      return;
+    }
+    shell.out().println(response_plain);
   }
 
   @Override

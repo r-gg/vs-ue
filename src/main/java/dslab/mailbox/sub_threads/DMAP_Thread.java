@@ -328,7 +328,7 @@ public class DMAP_Thread extends MB_Thread {
         }
         return inbox;
       case "delete":
-        id = try_parse_int(content); // test whether that doesn't crash ("var" keyword from other branch super dodgy)
+        id = try_parse_int(content);
         if (id.isPresent()) {
           if (inbox.delete(id.getAsInt())) {
             printMsg(them, encipher_mby("ok"));
