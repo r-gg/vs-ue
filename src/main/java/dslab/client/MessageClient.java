@@ -221,17 +221,18 @@ public class MessageClient implements IMessageClient, Runnable {
       aes_dec_cipher = Cipher.getInstance(ALGORITHM_AES);
       aes_dec_cipher.init(Cipher.DECRYPT_MODE, custom_aes_key, iv);
 
-      // challenge <- 32 random bytes
-      // TODO: make random
-      String challenge = "challenge";
+      final byte[] challenge_bytes = new byte[32];
+      secureRandom.nextBytes(challenge_bytes);
+      String challenge = Base64.getEncoder().encodeToString(challenge_bytes);
+
 
       // printMsg(encode(pubkey, "ok <challenge> <secret-key> <iv>"))
       String req_plain = String.join(" ", "ok", challenge, Base64.getEncoder().encodeToString(custom_aes_key.getEncoded()),
               Base64.getEncoder().encodeToString(iv_bytes));
-      byte[] challenge_encrypted = rsa_cipher.doFinal(req_plain.getBytes());
-      String challenge_encoded = Base64.getEncoder().encodeToString(challenge_encrypted);
+      byte[] req_encrypted = rsa_cipher.doFinal(req_plain.getBytes());
+      String req_encoded = Base64.getEncoder().encodeToString(req_encrypted);
 
-      mb_writer.println(challenge_encoded);
+      mb_writer.println(req_encoded);
       mb_writer.flush();
 
       server_line = mb_reader.readLine();
