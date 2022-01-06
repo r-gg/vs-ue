@@ -4,15 +4,7 @@ import java.util.Arrays;
 
 public class InputChecker {
 
-  public static boolean not_null(Object o) {
-    return o != null;
-  }
-
-  public static boolean is_null(Object o) {
-    return o == null;
-  }
-
-  private static boolean null_or_blank(String test) {
+  public static boolean null_or_blank(String test) {
     return test == null || test.isBlank();
   }
 
