@@ -43,6 +43,7 @@ public class DMTP_Message {
   /**
    * simple DMTP_Message validation
    * only checks whether all fields are set (to something non-"empty" or "blank")
+   * except with hash, where just "not null" is checked
    * doesn't check validity of sender / recipient mail addresses
    * returns list of problems (as List<String>)
    */
@@ -51,14 +52,17 @@ public class DMTP_Message {
     if (msg.recipients == null || msg.recipients.isEmpty()) {
       probs.add("no recipients");
     }
-    if (msg.sender == null) {
+    if (InputChecker.null_or_blank(msg.sender)) {
       probs.add("no sender");
     }
-    if (msg.subject == null) {
+    if (InputChecker.null_or_blank(msg.subject)) {
       probs.add("no subject");
     }
-    if (msg.text_body == null) {
+    if (InputChecker.null_or_blank(msg.text_body)) {
       probs.add("no data");
+    }
+    if (msg.hash == null) {
+      probs.add("no hash");
     }
     return probs;
   }
