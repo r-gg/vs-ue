@@ -473,22 +473,29 @@ public class MessageClient implements IMessageClient, Runnable {
   @Override
   @Command
   public void verify(String id) {
-        /*
-        TODO
-        Check Handbook/Tips & Tricks chapter for useful code snippets.
-        Create a javax.crypto.Mac instance using the HmacSHA256 algorithm,
-        initialize it with the shared secret key.
-        
-        prepare message-string for hashing (bytes_to_hash)
-        DMTP_to_bytes()
+    int id_num;
+    try { id_num = Integer.parseInt(id); }
+    catch (NumberFormatException nfe) {
+      shell.out().println("error please provide an integer as a message id");
+      return;
+    }
 
-            convert to bytes
-        
-        using Mac instance, calc 32-byte hash of bytes_to_hash
+    DMTP_Message msg;
+    try {
+      msg = request_and_parse_message(id_num);
+    } catch (IOException e) {
+      shell.out().println("error with the mailbox-connection:\n" + e.getMessage());
+      return;
+    } catch (ServerException e) {
+      shell.out().println(e.getMessage());
+      return;
+    }
 
-        use Base64 binary-to-text to get plaintext hash
-        attach to 'hash' field
-        */
+    if(isHashCorrect(msg)) {
+      shell.out().println("ok");
+    } else {
+      shell.out().println("error");
+    }
   }
 
 
@@ -648,36 +655,14 @@ public class MessageClient implements IMessageClient, Runnable {
   }
 
   /**
-   * Returns the base64 encoded hash of the message
-   *
-   * @param message to be hashed, formatted as described in assignment sheet (Fields joined with '\n')
-   * @return b64 encoded hash of the message
-   */
-  private String calculateHash(String message) {
-    hMac.update(message.getBytes());
-    byte[] hash = hMac.doFinal();
-    return Base64.getEncoder().encodeToString(hash);
-  }
-
-  /**
-   * Checks if the value of the hash matches the actual hash of the message
+   * Checks if the hash field of the message matches the actual (newly calculated) hash of the message
    *
    * @param message received message, to be checked
-   * @param hash    received hash (b64 encoded), to be checked
    * @return true if hash is correct, false otherwise
    */
-  private boolean isHashCorrect(DMTP_Message message, String hash) {
-    return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
+  private boolean isHashCorrect(DMTP_Message message) {
+    return  MessageDigest.isEqual(Base64.getDecoder().decode(message.hash),
+                         Base64.getDecoder().decode(calculateHash(message)));
   }
 
-  /**
-   * Checks if the value of the hash matches the actual hash of the message
-   *
-   * @param message received message, to be checked (fields joined with '\n')
-   * @param hash    received hash (b64 encoded), to be checked
-   * @return true if hash is correct, false otherwise
-   */
-  private boolean isHashCorrect(String message, String hash) {
-    return Arrays.equals(Base64.getDecoder().decode(hash), Base64.getDecoder().decode(calculateHash(message)));
-  }
 }
