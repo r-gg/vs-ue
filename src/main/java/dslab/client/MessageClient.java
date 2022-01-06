@@ -389,7 +389,7 @@ public class MessageClient implements IMessageClient, Runnable {
 
   /**
    * @param id of the message to request (as assigned by the DMAP server)
-   * @return a valid (as per "collectProblems") message, unless...
+   * @return a valid (as per "collectProblems_hash_required") message, unless...
    * @throws IOException on problems with the mailbox-connection
    * @throws ServerException on protocol errors by the server
    */
@@ -443,7 +443,7 @@ public class MessageClient implements IMessageClient, Runnable {
       }
     }
 
-    List<String> probs = DMTP_Message.collectProblems(message);
+    List<String> probs = DMTP_Message.collectProblems_hash_required(message);
     if (probs.size() != 0) {
       throw new ServerException("error a message had problems: " + String.join(", ", probs));
     }
