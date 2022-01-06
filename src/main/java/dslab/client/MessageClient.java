@@ -365,15 +365,9 @@ public class MessageClient implements IMessageClient, Runnable {
 
     // for each msg_id
     for (Integer msg_id: inbox.keySet()) {
-      // "show <msg_id>"
-      printMsg(mb_writer, encipher("show " + msg_id));
-
-      // read + decipher response
-      String show_resp_plain;
+      DMTP_Message new_msg;
       try {
-        String show_response = mb_reader.readLine();
-        not_null_guard(show_response);
-        show_resp_plain = decipher(show_response);
+        new_msg = request_and_parse_message(msg_id);
       } catch (IOException e) {
         shell.out().println("error with the mailbox-connection:\n" + e.getMessage());
         return;
@@ -381,57 +375,9 @@ public class MessageClient implements IMessageClient, Runnable {
         shell.out().println(e.getMessage());
         return;
       }
+      // assert: message is valid (as per request_and_parse_message post-condition)
 
-      // parse plaintext
-      DMTP_Message new_msg = new DMTP_Message();
-      String[] show_lines = show_resp_plain.split("\\n");
-      for (String l : show_lines) {
-        var cmd_cntnt = split_cmd_cntnt(l);
-        if (cmd_cntnt.isEmpty()) {
-          shell.out().println(protocol_error_str);
-          return;
-        }
-        String command = cmd_cntnt.get().left;
-        Optional<String> content = cmd_cntnt.get().right;
-        switch (command) {
-          case "to":
-            if (content.isEmpty()) {
-              shell.out().println(protocol_error_str + " (empty 'to' on a msg)");
-              return;
-            } else {
-              try {
-                new_msg.set_recips_by_string(content.get());
-              } catch (FormatException e) {
-                shell.out().println(protocol_error_str + " (invalid 'to' field on a msg)");
-                return;
-              }
-            }
-            break;
-          case "from":
-            if (content.isEmpty() || !InputChecker.is_mail_address(content.get())) {
-              shell.out().println(protocol_error_str + " (invalid 'from' on a msg)");
-              return;
-            } else {
-              new_msg.sender = content.get();
-            }
-            break;
-          case "subject":
-            new_msg.subject = content.orElse("");
-            break;
-          case "data":
-            new_msg.text_body = content.orElse("");
-            break;
-          case "hash":
-              new_msg.hash = content.orElse("");
-          break;
-        }
-      }
-
-      if (DMTP_Message.collectProblems(new_msg).size() == 0) {
-        inbox.put(msg_id, new_msg);
-      } else {
-        shell.out().println("msg " + msg_id + " had problems" );
-      }
+      inbox.put(msg_id, new_msg);
     }
 
     // pretty print each message inbox (format not specified)
@@ -439,6 +385,70 @@ public class MessageClient implements IMessageClient, Runnable {
       shell.out().println("message #" + mapping.getKey() + ":");
       shell.out().println(mapping.getValue().toString());
     }
+  }
+
+  /**
+   * @param id of the message to request (as assigned by the DMAP server)
+   * @return a valid (as per "collectProblems") message, unless...
+   * @throws IOException on problems with the mailbox-connection
+   * @throws ServerException on protocol errors by the server
+   */
+  DMTP_Message request_and_parse_message(int id) throws IOException, ServerException {
+    printMsg(mb_writer, encipher("show " + id));
+
+    // read + decipher response
+    String show_resp_plain;
+    String show_response = mb_reader.readLine();
+    not_null_guard(show_response);
+    show_resp_plain = decipher(show_response);
+
+    // parse plaintext
+    DMTP_Message message = new DMTP_Message();
+    String[] show_lines = show_resp_plain.split("\\n");
+    for (String l : show_lines) {
+      var cmd_cntnt = split_cmd_cntnt(l);
+      if (cmd_cntnt.isEmpty()) {
+        throw new ServerException(protocol_error_str);
+      }
+      String command = cmd_cntnt.get().left;
+      Optional<String> content = cmd_cntnt.get().right;
+      switch (command) {
+        case "to":
+          if (content.isEmpty()) {
+            throw new ServerException(protocol_error_str + " (empty 'to' on a msg)");
+          } else {
+            try {
+              message.set_recips_by_string(content.get());
+            } catch (FormatException e) {
+              throw new ServerException(protocol_error_str + " (invalid 'to' field on a msg)");
+            }
+          }
+          break;
+        case "from":
+          if (content.isEmpty() || !InputChecker.is_mail_address(content.get())) {
+            throw new ServerException(protocol_error_str + " (invalid 'from' on a msg)");
+          } else {
+            message.sender = content.get();
+          }
+          break;
+        case "subject":
+          message.subject = content.orElse("");
+          break;
+        case "data":
+          message.text_body = content.orElse("");
+          break;
+        case "hash":
+          message.hash = content.orElse("");
+          break;
+      }
+    }
+
+    List<String> probs = DMTP_Message.collectProblems(message);
+    if (probs.size() != 0) {
+      throw new ServerException("error a message had problems: " + String.join(", ", probs));
+    }
+
+    return message;
   }
 
   @Override

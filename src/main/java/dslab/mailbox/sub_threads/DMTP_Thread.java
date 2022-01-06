@@ -184,7 +184,7 @@ public class DMTP_Thread extends MB_Thread {
           ok(them);
           msg = null;
         } else {
-          error(them, String.join(", ", DMTP_Message.collectProblems(msg)));
+          error(them, String.join(", ", probs));
         }
         break;
       case "quit":
