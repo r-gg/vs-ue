@@ -114,10 +114,6 @@ public final class ComponentFactory {
    */
   public static IMessageClient createMessageClient(String componentId, InputStream in, PrintStream out)
       throws Exception {
-    /*
-     * TODO: Here you can modify the code (if necessary) to instantiate your components
-     */
-
     Config config = new Config(componentId);
     return new MessageClient(componentId, config, in, out);
   }

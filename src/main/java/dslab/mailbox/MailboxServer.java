@@ -64,6 +64,8 @@ public class MailboxServer implements IMailboxServer, Runnable {
       user_db.put(s, new Pair<>(user_cred_config.getString(s), new Inbox()));
     }
 
+    // TODO: register with namespace servers
+
     shell = new Shell(in, out);
     shell.register(this);
 

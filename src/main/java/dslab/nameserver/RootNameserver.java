@@ -31,6 +31,7 @@ public class RootNameserver extends Nameserver implements INameserver{
     private void createRegistry() {
         try {
             registry = LocateRegistry.createRegistry(config.getInt("port"));
+            // TODO: Why port = 0? (explain or fix)
             INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
             registry.bind(config.getString("root_id"), remoteobject);
         } catch (RemoteException | AlreadyBoundException e) {
