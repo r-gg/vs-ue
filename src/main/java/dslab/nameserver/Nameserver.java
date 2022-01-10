@@ -31,16 +31,17 @@ public class Nameserver implements INameserver, INameserverRemote {
    * @param out         the output stream to write console output to
    */
   public Nameserver(String componentId, Config config, InputStream in, PrintStream out) {
-    // TODO
-
     this.config = config;
+
+    domain = config.getString("domain").split("\\.");
+
+    // TODO register self with root-nameserver
 
     shell = new Shell(in, out);
     shell.register(this);
 
     // (prompt may not work correctly/nicely when application is run via ant)
     shell.setPrompt(componentId + "> ");
-    domain = config.getString("domain").split("\\.");
   }
 
   @Override
