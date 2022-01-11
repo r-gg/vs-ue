@@ -1,9 +1,12 @@
 package dslab.transfer.sub_thread;
 
+import dslab.mailbox.sub_threads.DMTP_Thread;
 import dslab.shared_models.ConnectionEnd;
 import dslab.shared_models.DMTP_Message;
 import dslab.shared_models.FormatException;
 import dslab.util.InputChecker;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import static dslab.util.DMTP_Utils.*;
 
@@ -26,6 +29,8 @@ public class ConnectionHandler extends Thread {
   private final AtomicBoolean shutdown_initiated;
   private final Socket socket;
   private final BlockingQueue<DMTP_Message> waiting_messages;
+
+  private static final Log LOG = LogFactory.getLog(ConnectionHandler.class);
 
   public ConnectionHandler(
       AtomicBoolean shutdown_initiated,
@@ -162,7 +167,7 @@ public class ConnectionHandler extends Thread {
     } catch (SocketException e) {
       // when the socket is closed, the I/O methods of the Socket will throw a SocketException
       // almost all SocketException cases indicate that the socket was closed
-      System.out.println("SocketException while handling socket:\n" + e.getMessage());
+      LOG.info("DMTP_Thread-Connection ended via SocketException:\n" + e.getMessage());
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...

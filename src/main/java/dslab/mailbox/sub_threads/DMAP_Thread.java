@@ -109,7 +109,7 @@ public class DMAP_Thread extends MB_Thread {
     } catch (SocketException e) {
       // when the socket is closed, the I/O methods of the Socket will throw a SocketException
       // almost all SocketException cases indicate that the socket was closed
-      LOG.error("SocketException while handling socket:\n" + e.getMessage());
+      LOG.info("DMAP_Thread-Connection ended via SocketException:\n" + e.getMessage());
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...

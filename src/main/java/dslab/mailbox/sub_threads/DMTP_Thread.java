@@ -6,6 +6,8 @@ import dslab.shared_models.ConnectionEnd;
 import dslab.shared_models.DMTP_Message;
 import dslab.util.InputChecker;
 import dslab.util.Pair;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.net.Socket;
@@ -16,6 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static dslab.util.DMTP_Utils.*;
 
 public class DMTP_Thread extends MB_Thread {
+
+  private static final Log LOG = LogFactory.getLog(DMTP_Thread.class);
 
   public DMTP_Thread(String componentId, String domain, AtomicBoolean shutdown_initiated, Socket incomingConn, Map<String, Pair<String, Inbox>> user_db) {
     super(componentId, domain, shutdown_initiated, incomingConn, user_db);
@@ -38,8 +42,6 @@ public class DMTP_Thread extends MB_Thread {
 
       // read client requests
       while (!shutdown_initiated.get() && (inc_line = reader.readLine()) != null) {
-        System.out.println("Client sent the following request: " + inc_line);
-
         var parsed = split_cmd_cntnt(inc_line);
         if (parsed.isEmpty()) {
           protocol_error(writer);
@@ -57,7 +59,7 @@ public class DMTP_Thread extends MB_Thread {
     } catch (SocketException e) {
       // when the socket is closed, the I/O methods of the Socket will throw a SocketException
       // almost all SocketException cases indicate that the socket was closed
-      System.out.println("SocketException while handling socket:\n" + e.getMessage());
+      LOG.info("DMTP_Thread-Connection ended via SocketException:\n" + e.getMessage());
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...
