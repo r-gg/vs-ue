@@ -152,10 +152,10 @@ public class MessageClientStartupTest {
                 // AES Ciphers
                 Cipher aes_enc_cipher, aes_dec_cipher;
                 //  Encrypt
-                aes_enc_cipher = Cipher.getInstance("AES/CTR/NoPadding");
+                aes_enc_cipher = Cipher.getInstance(ALGORITHM_AES);
                 aes_enc_cipher.init(Cipher.ENCRYPT_MODE, aes_key, iv);
                 //  Decrypt
-                aes_dec_cipher = Cipher.getInstance("AES/CTR/NoPadding");
+                aes_dec_cipher = Cipher.getInstance(ALGORITHM_AES);
                 aes_dec_cipher.init(Cipher.DECRYPT_MODE, aes_key, iv);
 
                 // RESPONSE
