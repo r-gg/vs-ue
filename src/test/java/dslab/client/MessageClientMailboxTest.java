@@ -54,6 +54,8 @@ public class MessageClientMailboxTest {
     private TestOutputStream messageClientOut;
     private Thread messageClientThread;
 
+    String HASHING_ALGO = "HmacSHA256";
+
     @Before
     public void setUp() throws Exception {
         LOG.info("Creating mailbox server");
@@ -119,10 +121,9 @@ public class MessageClientMailboxTest {
 
     @Test(timeout = 40000)
     public void inbox_mulipleMails_showsAllInboxDataCorrectly() throws Exception {
-        String ALGORITHM = "HmacSHA256";
         // Creating the hash:
         Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
-        Mac hMac = Mac.getInstance(ALGORITHM);
+        Mac hMac = Mac.getInstance(HASHING_ALGO);
         hMac.init(secretKey);
         DMTP_Message message = new DMTP_Message();
         message.sender = "arthur@earth.planet";
@@ -199,6 +200,93 @@ public class MessageClientMailboxTest {
                 containsString("nottrilliansubject"),
                 containsString("nottrilliandata")
         )));
+    }
+
+    @Test(timeout = 20000)
+    public void verify_validMail_yields_ok() throws Exception {
+        // Creating the valid mail, incl. hash:
+        Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
+        Mac hMac = Mac.getInstance(HASHING_ALGO);
+        hMac.init(secretKey);
+        DMTP_Message message = new DMTP_Message();
+        message.sender = "arthur@earth.planet";
+        message.recipients = new ArrayList<>(){{
+            add("trillian@earth.planet");
+        }};
+        message.subject = "eyoo trill";
+        message.text_body = "you're a real swell guy";
+        hMac.update(message.getJoined().getBytes());
+        byte[] hash = hMac.doFinal();
+        message.hash = Base64.getEncoder().encodeToString(hash);
+
+        // send a mail to trillian
+        try (JunitSocketClient client = new JunitSocketClient(mailboxConfig.getInt("dmtp.tcp.port"), err)) {
+            err.checkThat("Expected mailbox server to implement DMTP2.0", client.read(), is("ok DMTP2.0"));
+            client.sendAndVerify("begin", "ok");
+            client.sendAndVerify("from " + message.sender, "ok");
+            client.sendAndVerify("to " + String.join(",", message.recipients), "ok");
+            client.sendAndVerify("subject " + message.subject, "ok");
+            client.sendAndVerify("data " + message.text_body, "ok");
+            client.sendAndVerify("hash " + message.hash, "ok");
+            client.sendAndVerify("send", "ok");
+            client.send("quit");
+        }
+
+        Thread.sleep(2000); // wait a bit
+
+        messageClientIn.addLine("verify 0");
+        String output = messageClientOut.listen(3, TimeUnit.SECONDS);
+
+        err.checkThat("verify response didn't contain ok and/or did contain error", output, allOf(
+            containsString("ok"),
+            not(containsString("error"))
+        ));
+    }
+
+    @Test(timeout = 20000)
+    public void verify_tamperedMail_yields_error() throws Exception {
+        // Creating the (initially) valid mail
+        Key secretKey = Keys.readSecretKey(new File("keys/hmac.key"));
+        Mac hMac = Mac.getInstance(HASHING_ALGO);
+        hMac.init(secretKey);
+        DMTP_Message message = new DMTP_Message();
+        message.sender = "arthur@earth.planet";
+        message.recipients = new ArrayList<>(){{
+            add("trillian@earth.planet");
+        }};
+        message.subject = "eyoo trill";
+        message.text_body = "you're a real swell guy";
+        hMac.update(message.getJoined().getBytes());
+        byte[] hash = hMac.doFinal();
+        message.hash = Base64.getEncoder().encodeToString(hash);
+
+        // .. and then "tamper" with it
+        message.subject = "eyoo trillian my man";
+        message.text_body = "you're a real doodoo";
+
+
+        // send a mail to trillian
+        try (JunitSocketClient client = new JunitSocketClient(mailboxConfig.getInt("dmtp.tcp.port"), err)) {
+            err.checkThat("Expected mailbox server to implement DMTP2.0", client.read(), is("ok DMTP2.0"));
+            client.sendAndVerify("begin", "ok");
+            client.sendAndVerify("from " + message.sender, "ok");
+            client.sendAndVerify("to " + String.join(",", message.recipients), "ok");
+            client.sendAndVerify("subject " + message.subject, "ok");
+            client.sendAndVerify("data " + message.text_body, "ok");
+            client.sendAndVerify("hash " + message.hash, "ok");
+            client.sendAndVerify("send", "ok");
+            client.send("quit");
+        }
+
+        Thread.sleep(2000); // wait a bit
+
+        messageClientIn.addLine("verify 0");
+        String output = messageClientOut.listen(3, TimeUnit.SECONDS);
+
+        err.checkThat("verify response didn't contain ok and/or did contain error", output, allOf(
+            containsString("error"),
+            not(containsString("ok"))
+        ));
     }
 
 }
