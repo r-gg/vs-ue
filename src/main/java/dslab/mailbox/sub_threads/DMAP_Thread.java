@@ -109,7 +109,9 @@ public class DMAP_Thread extends MB_Thread {
     } catch (SocketException e) {
       // when the socket is closed, the I/O methods of the Socket will throw a SocketException
       // almost all SocketException cases indicate that the socket was closed
-      LOG.info("DMAP_Thread-Connection ended via SocketException:\n" + e.getMessage());
+
+      // so apparently, this is actually how reader.readLine() indicates connection-ends,
+      // not by returning null (as the documentation made me believe). -> can be ignored, I think
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...

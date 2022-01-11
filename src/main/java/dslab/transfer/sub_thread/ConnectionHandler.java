@@ -165,9 +165,7 @@ public class ConnectionHandler extends Thread {
         }
       }
     } catch (SocketException e) {
-      // when the socket is closed, the I/O methods of the Socket will throw a SocketException
-      // almost all SocketException cases indicate that the socket was closed
-      LOG.info("DMTP_Thread-Connection ended via SocketException:\n" + e.getMessage());
+      // see documentation at DMAP_Thread
     } catch (IOException e) {
       // you should properly handle all other exceptions
       // idk what could be wrong / how it would be handled...
