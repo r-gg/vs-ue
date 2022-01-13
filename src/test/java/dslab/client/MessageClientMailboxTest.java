@@ -88,7 +88,6 @@ public class MessageClientMailboxTest {
 
         mailboxServerIn.addLine("shutdown");
         mailboxServerThread.join(Constants.COMPONENT_TEARDOWN_WAIT);
-        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/2);
     }
 
     @Test(timeout = 20000)
