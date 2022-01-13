@@ -97,7 +97,8 @@ public class Nameserver implements INameserver, INameserverRemote {
     try {
       Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
       INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
-      rootNameserver.registerNameserver(this.config.getString("domain"), this);
+      INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
+      rootNameserver.registerNameserver(this.config.getString("domain"), remoteobject);
     } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException e) {
       e.printStackTrace();
     }
