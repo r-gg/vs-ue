@@ -295,10 +295,10 @@ public class TransferThread implements Runnable {
       var addr = domainLookup(mb_domain);
 
       if (addr == null) {
+        // no server-address was found by the domain-lookup
         delivery_failure = true;
         err_msg.append(mb_domain).append(" is not a known domain. ");
       } else {
-        // address not under known mailbox server's domain
         res.add(addr);
       }
     }
@@ -309,7 +309,6 @@ public class TransferThread implements Runnable {
    *
    * @param domain
    * @return something, or null if ...
-   * @throws UnknownHostException
    */
   private Addr_Info domainLookup(String domain) {
     var addr_str = domainLookupRec(domain, null);
@@ -329,7 +328,7 @@ public class TransferThread implements Runnable {
     try {
       addr = new Addr_Info(hostname, port);
     } catch (UnknownHostException e) {
-      // this case is at least sort of handled by the null check in the calling code
+      // this case is at least sort of handled by the null check in server_selection()
     }
     return addr;
   }
