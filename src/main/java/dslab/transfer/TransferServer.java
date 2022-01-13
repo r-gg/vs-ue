@@ -149,6 +149,7 @@ public class TransferServer implements ITransferServer, Runnable {
    */
   private Map<String, Addr_Info> domain_lookup() {
     Set<String> keys = this.maildomains_config.listKeys();
+    // todo remove map
     Map<String, Addr_Info> res = new HashMap<>();
 
     for (String k : keys) {

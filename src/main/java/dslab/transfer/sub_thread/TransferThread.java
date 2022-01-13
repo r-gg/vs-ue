@@ -3,6 +3,7 @@ package dslab.transfer.sub_thread;
 import dslab.nameserver.INameserverRemote;
 import dslab.shared_models.Addr_Info;
 import dslab.shared_models.DMTP_Message;
+import dslab.shared_models.ImplError;
 import dslab.transfer.models.Self_Info;
 import dslab.util.Config;
 import dslab.util.Pair;
@@ -291,18 +292,49 @@ public class TransferThread implements Runnable {
     for (String recp : recipients) {
       var split = recp.split("@", 2);
       var mb_domain = split[1];
-      if (mailbox_addrss.containsKey(mb_domain)) {
-        res.add(mailbox_addrss.get(mb_domain));
-      } else {
-        // address not under known mailbox server's domain
+      var addr = domainLookup(mb_domain);
+
+      if (addr == null) {
         delivery_failure = true;
         err_msg.append(mb_domain).append(" is not a known domain. ");
+      } else {
+        // address not under known mailbox server's domain
+        res.add(addr);
       }
     }
     return new Tripple<>(res, delivery_failure, err_msg.toString());
   }
 
-  private String domainLookup(String domain, INameserverRemote ns) {
+  /**
+   *
+   * @param domain
+   * @return something, or null if ...
+   * @throws UnknownHostException
+   */
+  private Addr_Info domainLookup(String domain) {
+    var addr_str = domainLookupRec(domain, null);
+    if (addr_str == null){
+      return null;
+    }
+    var splitted = addr_str.split(":", 2);
+    String hostname = splitted[0];
+    int port;
+    try {
+      port = Integer.parseInt(splitted[1]);
+    } catch (NumberFormatException nfe) {
+      throw new ImplError("lookup didn't yield a valid port after ':'");
+    }
+
+    Addr_Info addr = null;
+    try {
+      addr = new Addr_Info(hostname, port);
+    } catch (UnknownHostException e) {
+      // this case is at least sort of handled by the null check in the calling code
+    }
+    return addr;
+  }
+
+  private String domainLookupRec(String domain, INameserverRemote ns) {
     if (ns == null) {
       try {
         Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
@@ -323,7 +355,7 @@ public class TransferThread implements Runnable {
       try {
         INameserverRemote next_ns = ns.getNameserver(domainparts[domainparts.length - 1]);
         if (next_ns != null) {
-          return domainLookup(String.join(".", Arrays.copyOfRange(domainparts, 0, domainparts.length - 2)), next_ns);
+          return domainLookupRec(String.join(".", Arrays.copyOfRange(domainparts, 0, domainparts.length - 2)), next_ns);
         }
       } catch (RemoteException e) {
         e.printStackTrace();
