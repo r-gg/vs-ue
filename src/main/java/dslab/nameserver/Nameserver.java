@@ -3,7 +3,10 @@ package dslab.nameserver;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.rmi.NoSuchObjectException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +38,7 @@ public class Nameserver implements INameserver, INameserverRemote {
 
     domain = config.getString("domain").split("\\.");
 
-    // TODO register self with root-nameserver
+    this.registerSelf();
 
     shell = new Shell(in, out);
     shell.register(this);
@@ -83,6 +86,16 @@ public class Nameserver implements INameserver, INameserverRemote {
   public static void main(String[] args) throws Exception {
     INameserver component = ComponentFactory.createNameserver(args[0], System.in, System.out);
     component.run();
+  }
+
+  public void registerSelf() {
+    try {
+      Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
+      INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
+      rootNameserver.registerNameserver(this.config.getString("domain"), this);
+    } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException e) {
+      e.printStackTrace();
+    }
   }
 
   @Override

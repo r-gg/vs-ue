@@ -40,6 +40,10 @@ public class RootNameserver extends Nameserver implements INameserver{
     }
 
     @Override
+    public void registerSelf(){
+    }
+
+    @Override
     public void shutdown() {
         super.shutdown();
         try {

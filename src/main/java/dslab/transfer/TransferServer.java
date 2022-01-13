@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TransferServer implements ITransferServer, Runnable {
 
   private final Config maildomains_config;
+  private final Config config;
   // Executor for spawning arbitrary distinct tasks.
   private final ExecutorService exec = Executors.newCachedThreadPool();
   private final AtomicBoolean shutdown_initiated = new AtomicBoolean(false);
@@ -54,6 +55,7 @@ public class TransferServer implements ITransferServer, Runnable {
    */
   public TransferServer(String componentId, Config self_config, Config maildomains_config, InputStream in, PrintStream out) {
     this.maildomains_config = maildomains_config;
+    this.config = self_config;
 
 
     mailbox_domains = domain_lookup();
@@ -94,7 +96,7 @@ public class TransferServer implements ITransferServer, Runnable {
     // start the message-forwarding TransferThreads
     int n_of_TransferThreads = scale_factor * base_n_of_TransferThreads;
     for (int i = 0; i < n_of_TransferThreads; i++) {
-      exec.execute(new TransferThread(shutdown_initiated, waitingMessages, mailbox_domains, self_info, monitor_info));
+      exec.execute(new TransferThread(shutdown_initiated, waitingMessages, mailbox_domains, self_info, monitor_info, config));
     }
 
     // spawns/manages new ConnectionHandler-Threads on it's own, in it's own Pool:

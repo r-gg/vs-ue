@@ -7,11 +7,20 @@ import dslab.ComponentFactory;
 import dslab.mailbox.sub_threads.AcceptThread;
 import dslab.mailbox.models.DMAP_ThreadFactory;
 import dslab.mailbox.models.DMTP_ThreadFactory;
+import dslab.nameserver.AlreadyRegisteredException;
+import dslab.nameserver.INameserverRemote;
+import dslab.nameserver.InvalidDomainException;
 import dslab.util.Config;
 import dslab.util.Pair;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +51,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
   private final int DMAP_port;
   private final String domain;
   private final String componentId;
+  private final Config config;
 
   /**
    * Creates a new server instance.
@@ -54,6 +64,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
   public MailboxServer(String componentId, Config component_config, Config user_cred_config, InputStream in, PrintStream out) {
 
     this.componentId = componentId;
+    this.config = component_config;
     DMTP_port = component_config.getInt("dmtp.tcp.port");
     DMAP_port = component_config.getInt("dmap.tcp.port");
 
@@ -64,7 +75,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
       user_db.put(s, new Pair<>(user_cred_config.getString(s), new Inbox()));
     }
 
-    // TODO: register with namespace servers
+    this.registerAtNS();
 
     shell = new Shell(in, out);
     shell.register(this);
@@ -95,6 +106,16 @@ public class MailboxServer implements IMailboxServer, Runnable {
     shutdown_initiated.set(true);
 
     throw new StopShellException(); // This will break the shell's read loop and make Shell.run() return gracefully.
+  }
+
+  private void registerAtNS(){
+    try {
+      Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
+      INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
+      rootNameserver.registerMailboxServer(this.domain, InetAddress.getLocalHost()+":"+this.DMTP_port);
+    } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException | UnknownHostException e) {
+      e.printStackTrace();
+    }
   }
 
   public static void main(String[] args) throws Exception {

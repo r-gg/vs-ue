@@ -1,12 +1,19 @@
 package dslab.transfer.sub_thread;
 
+import dslab.nameserver.INameserverRemote;
 import dslab.shared_models.Addr_Info;
 import dslab.shared_models.DMTP_Message;
 import dslab.transfer.models.Self_Info;
+import dslab.util.Config;
+import dslab.util.Pair;
 import dslab.util.Tripple;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -33,13 +40,15 @@ public class TransferThread implements Runnable {
   private final Addr_Info monitor_info;
   private final Self_Info self_info;
   private final Map<String, Addr_Info> mailbox_addrss;
+  private final Config config;
 
-  public TransferThread(AtomicBoolean shutdown_initiated, BlockingQueue<DMTP_Message> waiting_messages, Map<String, Addr_Info> mailbox_addrss, Self_Info self_info, Addr_Info monitor_addr) {
+  public TransferThread(AtomicBoolean shutdown_initiated, BlockingQueue<DMTP_Message> waiting_messages, Map<String, Addr_Info> mailbox_addrss, Self_Info self_info, Addr_Info monitor_addr, Config config) {
     this.shutdown_initiated = shutdown_initiated;
     this.waiting_messages = waiting_messages;
     this.monitor_info = monitor_addr;
     this.self_info = self_info;
     this.mailbox_addrss = mailbox_addrss;
+    this.config = config;
 
     // StackOverflow is conflicted on whether UDP-socket.send() is thread-safe
     // So I'll opt for potential duplication (a socket per thread) over possible erroneous behavior
@@ -291,6 +300,36 @@ public class TransferThread implements Runnable {
       }
     }
     return new Tripple<>(res, delivery_failure, err_msg.toString());
+  }
+
+  private String domainLookup(String domain, INameserverRemote ns) {
+    if (ns == null) {
+      try {
+        Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
+        ns = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
+      } catch (RemoteException | NotBoundException e) {
+        e.printStackTrace();
+        return null;
+      }
+    }
+    String[] domainparts = domain.split("\\.");
+    if (domainparts.length == 1) {
+      try {
+        return ns.lookup(domain);
+      } catch (RemoteException e) {
+        e.printStackTrace();
+      }
+    } else {
+      try {
+        INameserverRemote next_ns = ns.getNameserver(domainparts[domainparts.length - 1]);
+        if (next_ns != null) {
+          return domainLookup(String.join(".", Arrays.copyOfRange(domainparts, 0, domainparts.length - 2)), next_ns);
+        }
+      } catch (RemoteException e) {
+        e.printStackTrace();
+      }
+    }
+    return null;
   }
 
 }
