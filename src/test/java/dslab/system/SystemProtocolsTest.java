@@ -3,6 +3,7 @@ package dslab.system;
 import dslab.*;
 import dslab.mailbox.IMailboxServer;
 import dslab.monitoring.IMonitoringServer;
+import dslab.nameserver.INameserver;
 import dslab.transfer.ITransferServer;
 import dslab.transfer.TransferServerProtocolTest;
 import dslab.util.Config;
@@ -58,13 +59,46 @@ public class SystemProtocolsTest extends TestBase {
     private IMonitoringServer monitoringServer;
     private InetSocketAddress addr;
 
+    private TestInputStream nsRootIn;
+    private TestOutputStream nsRootOut;
+
+    private String nsPlanetComponentId = "ns-planet";
+    private String nsZeComponentId = "ns-ze";
+    private String nsRootComponentId = "ns-root";
+    private Config nsPlanetConfig;
+    private TestInputStream nsPlanetIn;
+    private TestOutputStream nsPlanetOut;
+
+    private TestInputStream nsZeIn;
+    private TestOutputStream nsZeOut;
+
+    private INameserver planet_nameserver;
+    private INameserver root_nameserver;
+    private INameserver ze_nameserver;
+
     @Before
     public void setUp() throws Exception {
+
+        this.nsRootIn = new TestInputStream();
+        this.nsPlanetIn = new TestInputStream();
+        this.nsRootOut = new TestOutputStream();
+        this.nsPlanetOut = new TestOutputStream();
+        this.nsZeIn = new TestInputStream();
+        this.nsZeOut = new TestOutputStream();
+
+        root_nameserver = ComponentFactory.createNameserver(nsRootComponentId, nsRootIn, nsRootOut);
+        planet_nameserver = ComponentFactory.createNameserver(nsPlanetComponentId, nsPlanetIn, nsPlanetOut);
+        ze_nameserver = ComponentFactory.createNameserver(nsZeComponentId, nsZeIn, nsZeOut);
+
         transferServer = ComponentFactory.createTransferServer(transferComponentId, transferIn, transferOut);
         transferServer2 = ComponentFactory.createTransferServer(transferComponentId2, transferIn2, transferOut2);
         earthMailboxServer = ComponentFactory.createMailboxServer(earthMailboxComponentId, mailboxIn1, mailboxOut1);
         monitoringServer = ComponentFactory.createMonitoringServer(monitoringComponentId, monitorIn, monitorOut);
         univerMailboxServer = ComponentFactory.createMailboxServer(univerMailboxComponentId2,mailboxIn2,mailboxOut2);
+
+
+
+
 
         transferServerPort = new Config(transferComponentId).getInt("tcp.port");
         transferServerPort2 = new Config(transferComponentId2).getInt("tcp.port");
@@ -92,11 +126,20 @@ public class SystemProtocolsTest extends TestBase {
 
         addr = new InetSocketAddress("127.0.0.1", new Config(monitoringComponentId).getInt("udp.port"));
 
+        new Thread(root_nameserver).start();
+        Thread.sleep(100);
+        new Thread(planet_nameserver).start();
+        Thread.sleep(100);
+        new Thread(ze_nameserver).start();
+        Thread.sleep(100);
+
         new Thread(transferServer).start();
         new Thread(transferServer2).start();
         new Thread(earthMailboxServer).start();
         new Thread(monitoringServer).start();
         new Thread(univerMailboxServer).start();
+
+
 
         Thread.sleep(Constants.COMPONENT_STARTUP_WAIT);
 
@@ -107,6 +150,7 @@ public class SystemProtocolsTest extends TestBase {
         Sockets.waitForSocket("localhost", dmtpServerPort2, Constants.COMPONENT_STARTUP_WAIT);
         Sockets.waitForSocket("localhost", transferServerPort, Constants.COMPONENT_STARTUP_WAIT);
         Sockets.waitForSocket("localhost", transferServerPort2, Constants.COMPONENT_STARTUP_WAIT);
+
     }
 
     @After
@@ -120,7 +164,13 @@ public class SystemProtocolsTest extends TestBase {
         mailboxIn2.addLine("shutdown"); // mailbox2 server shutdown
         Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/3);
         monitorIn.addLine("shutdown"); // monitor server shutdown
-        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT);
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/3);
+        nsPlanetIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/3);
+        nsRootIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/6);
+        nsZeIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/6);
 
         // Transfer
         err.checkThat("Expected tcp socket on port " + transferServerPort + " to be closed after shutdown",
@@ -173,7 +223,7 @@ public class SystemProtocolsTest extends TestBase {
         }
     }
 
-    @Test(timeout = 20000)
+    @Test(timeout = 200000000)
     @Name("Transferring the message to the mailbox server (one recipient)")
     @Description("Positive test: Message is visible in the mailbox of the recipient and the monitoring server sees the increase in traffic for the server and the sender.")
     public void onePositiveTransfer() throws Exception{
@@ -278,12 +328,12 @@ public class SystemProtocolsTest extends TestBase {
         monitorIn.addLine("addresses"); // send "addresses" command to command line
         Thread.sleep(2500);
         String output = String.join(",", monitorOut.getLines());
-        assertThat(output, containsString("trillian@earth.planet 2"));
+        assertThat(output, containsString("trillian@earth.planet 3"));
 
         monitorIn.addLine("servers");
         Thread.sleep(2500);
         output = String.join(",", monitorOut.getLines());
-        assertThat(output, containsString(transferServerAddress+":"+transferServerPort+" 2"));
+        assertThat(output, containsString(transferServerAddress+":"+transferServerPort+" 3"));
 
     }
 
@@ -535,7 +585,10 @@ public class SystemProtocolsTest extends TestBase {
             Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT); // waiting for the message to be sent
             client.send("list");
             String listResult = client.listen();
-            assertEquals(numberOfThreads, listResult.lines().count());
+            LOG.info("\n-------------------------------- SHOW RESULT -----------------------------------------\n"+listResult+
+                "\n--------------------------------------------------------------------------------------");
+
+            assertEquals(numberOfThreads, listResult.lines().count()-1);
 
             client.sendAndVerify("logout", "ok");
             client.sendAndVerify("quit", "ok bye");
