@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import at.ac.tuwien.dsg.orvell.Shell;
+import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.util.Config;
@@ -26,11 +27,9 @@ public class Nameserver implements INameserver, INameserverRemote {
   final Map<String, String> entries = new ConcurrentHashMap<>();
   final Map<String, INameserverRemote> nameservers = new ConcurrentHashMap<>();
   final String[] domain;
-  private final ExecutorService exec = Executors.newCachedThreadPool();
 
   /**
    * Creates a new server instance.
-   *
    * @param componentId the id of the component that corresponds to the Config resource
    * @param config      the component config
    * @param in          the input stream to read console input from
@@ -86,10 +85,13 @@ public class Nameserver implements INameserver, INameserverRemote {
   public void shutdown() {
     try {
       UnicastRemoteObject.unexportObject(this, true);
-    } catch (NoSuchObjectException e) {
-      e.printStackTrace();
+    } catch (NoSuchObjectException ignored) {
     }
-    // TODO ?
+
+    shell.out().println("shutdown initiated! Please give it a couple of seconds");
+    shell.out().flush();
+
+    throw new StopShellException(); // This will break the shell's read loop and make Shell.run() return gracefully.
   }
 
   public static void main(String[] args) throws Exception {

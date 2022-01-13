@@ -1,5 +1,6 @@
 package dslab.nameserver;
 
+import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.util.Config;
 
 import java.io.InputStream;
@@ -30,7 +31,7 @@ public class RootNameserver extends Nameserver implements INameserver, INameserv
 
     private void createRegistry() {
         try {
-            registry = LocateRegistry.createRegistry(config.getInt("port"));
+            registry = LocateRegistry.createRegistry(config.getInt("registry.port"));
             // TODO: Why port = 0? (explain or fix)
             INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
             registry.bind(config.getString("root_id"), remoteobject);
@@ -43,13 +44,14 @@ public class RootNameserver extends Nameserver implements INameserver, INameserv
     public void registerSelf(){
     }
 
+    @Command
     @Override
     public void shutdown() {
-        super.shutdown();
         try {
             UnicastRemoteObject.unexportObject(registry, true);
-        } catch (NoSuchObjectException e) {
-            e.printStackTrace();
+        } catch (NoSuchObjectException ignored) {
+
         }
+        super.shutdown();
     }
 }
