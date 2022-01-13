@@ -105,7 +105,9 @@ public class Nameserver implements INameserver, INameserverRemote {
       INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
       INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
       rootNameserver.registerNameserver(this.config.getString("domain"), remoteobject);
+      this.shell.out().println("Registered at parent nameserver");
     } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException e) {
+      this.shell.out().println("Could not register at parent nameserver");
       e.printStackTrace();
     }
   }
@@ -121,12 +123,14 @@ public class Nameserver implements INameserver, INameserverRemote {
         throw new AlreadyRegisteredException("Nameserver already registered for domain " + domain);
       }
       nameservers.put(subdomain[0], nameserver);
+      this.shell.out().println("Registered sub nameserver "+subdomain[0]);
     } else {
       INameserverRemote nextNameserver = nameservers.get(subdomain[subdomain.length-1]);
       if (nextNameserver == null) {
         throw new InvalidDomainException("Zone for " + domain + " is not existent on this nameserver");
       }
       nextNameserver.registerNameserver(String.join(".", subdomain), nameserver);
+      this.shell.out().println("Forwarded nameserver registration for "+String.join(".", subdomain));
     }
   }
 
@@ -141,22 +145,26 @@ public class Nameserver implements INameserver, INameserverRemote {
         throw new AlreadyRegisteredException("Hostname already registered for domain " + domain);
       }
       entries.put(subdomain[0], address);
+      this.shell.out().println("Registered mailbox server "+subdomain[0]);
     } else {
       INameserverRemote nextNameserver = nameservers.get(subdomain[subdomain.length-1]);
       if (nextNameserver == null) {
         throw new InvalidDomainException("Zone for " + domain + " is not existent on this nameserver");
       }
       nextNameserver.registerMailboxServer(String.join(".", subdomain), address);
+      this.shell.out().println("Forwarded mailbox registration for "+String.join(".", subdomain));
     }
   }
 
   @Override
   public INameserverRemote getNameserver(String zone) throws RemoteException {
+    this.shell.out().println("Nameserver requested for "+zone);
     return nameservers.get(zone);
   }
 
   @Override
   public String lookup(String username) throws RemoteException {
+    this.shell.out().println("Mailbox requested: "+username);
     return entries.get(username);
   }
 
