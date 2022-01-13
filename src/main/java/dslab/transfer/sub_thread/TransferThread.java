@@ -313,7 +313,7 @@ public class TransferThread implements Runnable {
       }
     }
     String[] domainparts = domain.split("\\.");
-    if (domainparts.length == 1) {
+    if (domainparts.length <= 1) {
       try {
         return ns.lookup(domain);
       } catch (RemoteException e) {

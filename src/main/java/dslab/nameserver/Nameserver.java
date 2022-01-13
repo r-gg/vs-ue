@@ -11,6 +11,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import at.ac.tuwien.dsg.orvell.Shell;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
@@ -24,6 +26,7 @@ public class Nameserver implements INameserver, INameserverRemote {
   final Map<String, String> entries = new ConcurrentHashMap<>();
   final Map<String, INameserverRemote> nameservers = new ConcurrentHashMap<>();
   final String[] domain;
+  private final ExecutorService exec = Executors.newCachedThreadPool();
 
   /**
    * Creates a new server instance.
@@ -50,6 +53,8 @@ public class Nameserver implements INameserver, INameserverRemote {
   @Override
   public void run() {
     // TODO
+    shell.run();
+    this.shutdown();
   }
 
   @Override
@@ -80,7 +85,7 @@ public class Nameserver implements INameserver, INameserverRemote {
     } catch (NoSuchObjectException e) {
       e.printStackTrace();
     }
-    // TODO
+    // TODO ?
   }
 
   public static void main(String[] args) throws Exception {

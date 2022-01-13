@@ -11,7 +11,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class RootNameserver extends Nameserver implements INameserver{
+public class RootNameserver extends Nameserver implements INameserver, INameserverRemote{
 
     private Registry registry;
 
