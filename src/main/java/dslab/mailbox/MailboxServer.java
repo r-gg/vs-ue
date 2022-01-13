@@ -112,7 +112,7 @@ public class MailboxServer implements IMailboxServer, Runnable {
     try {
       Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
       INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
-      rootNameserver.registerMailboxServer(this.domain, InetAddress.getLocalHost()+":"+this.DMTP_port);
+      rootNameserver.registerMailboxServer(this.domain, InetAddress.getLocalHost().getHostAddress()+":"+this.DMTP_port);
     } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException | UnknownHostException e) {
       e.printStackTrace();
     }

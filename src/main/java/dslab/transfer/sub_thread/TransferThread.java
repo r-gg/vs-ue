@@ -354,7 +354,7 @@ public class TransferThread implements Runnable {
       try {
         INameserverRemote next_ns = ns.getNameserver(domainparts[domainparts.length - 1]);
         if (next_ns != null) {
-          return domainLookupRec(String.join(".", Arrays.copyOfRange(domainparts, 0, domainparts.length - 2)), next_ns);
+          return domainLookupRec(String.join(".", Arrays.copyOfRange(domainparts, 0, domainparts.length - 1)), next_ns);
         }
       } catch (RemoteException e) {
         e.printStackTrace();
