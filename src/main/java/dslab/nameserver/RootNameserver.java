@@ -1,5 +1,7 @@
 package dslab.nameserver;
 
+import at.ac.tuwien.dsg.orvell.Shell;
+import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.util.Config;
 
@@ -42,6 +44,18 @@ public class RootNameserver extends Nameserver implements INameserver, INameserv
 
     @Override
     public void registerSelf(){
+    }
+
+    @Command
+    @Override
+    public void nameservers(){
+        super.nameservers();
+    }
+
+    @Override
+    @Command
+    public void addresses() {
+        super.addresses();
     }
 
     @Command
