@@ -39,7 +39,11 @@ public class Nameserver implements INameserver, INameserverRemote {
   public Nameserver(String componentId, Config config, InputStream in, PrintStream out) {
     this.config = config;
 
-    domain = config.getString("domain").split("\\.");
+    if(config.containsKey("domain")){
+      this.domain = config.getString("domain").split("\\.");
+    } else {
+      this.domain = new String[0];
+    }
 
     this.registerSelf();
 
