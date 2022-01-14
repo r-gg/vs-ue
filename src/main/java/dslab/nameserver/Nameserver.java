@@ -8,6 +8,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +23,8 @@ import at.ac.tuwien.dsg.orvell.StopShellException;
 import at.ac.tuwien.dsg.orvell.annotation.Command;
 import dslab.ComponentFactory;
 import dslab.util.Config;
+
+import static java.time.LocalDateTime.now;
 
 public class Nameserver implements INameserver, INameserverRemote {
 
@@ -105,9 +111,9 @@ public class Nameserver implements INameserver, INameserverRemote {
       INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
       INameserverRemote remoteobject = (INameserverRemote) UnicastRemoteObject.exportObject(this, 0);
       rootNameserver.registerNameserver(this.config.getString("domain"), remoteobject);
-      this.shell.out().println("Registered at parent nameserver");
+      this.shell.out().println(current_time_str() + " : Registered at parent nameserver");
     } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException e) {
-      this.shell.out().println("Could not register at parent nameserver");
+      this.shell.out().println(current_time_str() + " : Could not register at parent nameserver");
       e.printStackTrace();
     }
   }
@@ -120,17 +126,17 @@ public class Nameserver implements INameserver, INameserverRemote {
     }
     if (subdomain.length == 1) {
       if (nameservers.containsKey(subdomain[0])) {
-        throw new AlreadyRegisteredException("Nameserver already registered for domain " + domain);
+        throw new AlreadyRegisteredException("Nameserver already registered for domain '" + domain + "'");
       }
       nameservers.put(subdomain[0], nameserver);
-      this.shell.out().println("Registered sub nameserver "+subdomain[0]);
+      this.shell.out().println(current_time_str() + " : Registered sub nameserver '"+subdomain[0] + "'");
     } else {
       INameserverRemote nextNameserver = nameservers.get(subdomain[subdomain.length-1]);
       if (nextNameserver == null) {
-        throw new InvalidDomainException("Zone for " + domain + " is not existent on this nameserver");
+        throw new InvalidDomainException("Zone for '" + domain + "' is not existent on this nameserver");
       }
       nextNameserver.registerNameserver(String.join(".", subdomain), nameserver);
-      this.shell.out().println("Forwarded nameserver registration for "+String.join(".", subdomain));
+      this.shell.out().println(current_time_str() + " : Forwarded nameserver registration for '"+String.join(".", subdomain) + "'");
     }
   }
 
@@ -138,33 +144,33 @@ public class Nameserver implements INameserver, INameserverRemote {
   public void registerMailboxServer(String domain, String address) throws RemoteException, AlreadyRegisteredException, InvalidDomainException {
     String[] subdomain = stripDomainPart(domain);
     if (subdomain == null || subdomain.length == 0) {
-      throw new InvalidDomainException("Domain " + domain + " is not a valid domain for this nameserver");
+      throw new InvalidDomainException("Domain '" + domain + "' is not a valid domain for this nameserver");
     }
     if (subdomain.length == 1) {
       if (entries.containsKey(subdomain[0])) {
-        throw new AlreadyRegisteredException("Hostname already registered for domain " + domain);
+        throw new AlreadyRegisteredException("Hostname already registered for domain '" + domain + "'");
       }
       entries.put(subdomain[0], address);
-      this.shell.out().println("Registered mailbox server "+subdomain[0]);
+      this.shell.out().println(current_time_str() + " : Registered mailbox server '" + subdomain[0] +"'");
     } else {
       INameserverRemote nextNameserver = nameservers.get(subdomain[subdomain.length-1]);
       if (nextNameserver == null) {
-        throw new InvalidDomainException("Zone for " + domain + " is not existent on this nameserver");
+        throw new InvalidDomainException("Zone for '" + domain + "' is not existent on this nameserver");
       }
       nextNameserver.registerMailboxServer(String.join(".", subdomain), address);
-      this.shell.out().println("Forwarded mailbox registration for "+String.join(".", subdomain));
+      this.shell.out().println(current_time_str() + " : Forwarded mailbox registration for '"+String.join(".", subdomain) + "'");
     }
   }
 
   @Override
   public INameserverRemote getNameserver(String zone) throws RemoteException {
-    this.shell.out().println("Nameserver requested for "+zone);
+    this.shell.out().println(current_time_str() + " : Nameserver requested for '" + zone + "'");
     return nameservers.get(zone);
   }
 
   @Override
   public String lookup(String username) throws RemoteException {
-    this.shell.out().println("Mailbox requested: "+username);
+    this.shell.out().println(current_time_str() + " : Mailbox requested: " + username);
     return entries.get(username);
   }
 
@@ -186,5 +192,10 @@ public class Nameserver implements INameserver, INameserverRemote {
       }
     }
     return true;
+  }
+
+  private String current_time_str() {
+    LocalDateTime n = now();
+    return n.get(ChronoField.HOUR_OF_DAY) + ":" + n.get(ChronoField.MINUTE_OF_HOUR) + ":" + n.get(ChronoField.SECOND_OF_MINUTE);
   }
 }
