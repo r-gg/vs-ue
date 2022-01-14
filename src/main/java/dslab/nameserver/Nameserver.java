@@ -53,12 +53,13 @@ public class Nameserver implements INameserver, INameserverRemote {
 
 
     shell = new Shell(in, out);
-    this.registerSelf();
 
     shell.register(this);
 
     // (prompt may not work correctly/nicely when application is run via ant)
     shell.setPrompt(componentId + "> ");
+
+    this.registerSelf();
   }
 
   @Override

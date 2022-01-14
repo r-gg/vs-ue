@@ -76,13 +76,13 @@ public class MailboxServer implements IMailboxServer, Runnable {
       user_db.put(s, new Pair<>(user_cred_config.getString(s), new Inbox()));
     }
 
-    this.registerAtNS();
-
     shell = new Shell(in, out);
     shell.register(this);
 
     // (prompt may not work correctly/nicely when application is run via ant)
     shell.setPrompt(componentId + "> ");
+
+    this.registerAtNS();
   }
 
   @Override
