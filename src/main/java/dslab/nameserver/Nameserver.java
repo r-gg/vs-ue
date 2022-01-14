@@ -57,9 +57,7 @@ public class Nameserver implements INameserver, INameserverRemote {
 
   @Override
   public void run() {
-    // TODO
     shell.run();
-    this.shutdown();
   }
 
   @Override
