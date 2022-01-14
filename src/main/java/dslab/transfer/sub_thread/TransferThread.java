@@ -70,7 +70,7 @@ public class TransferThread implements Runnable {
     while (!shutdown_initiated.get()) {
       DMTP_Message cur_msg = null;
       try {
-        cur_msg = waiting_messages.poll(1000, TimeUnit.MILLISECONDS);
+        cur_msg = waiting_messages.poll(500, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         System.err.println("TransferThread got interrupted waiting while polling a message from the queue");
         e.printStackTrace();
@@ -78,7 +78,7 @@ public class TransferThread implements Runnable {
         continue;
       }
       if (cur_msg == null) {
-        // cur_msg set to null 1x/s, to allow shutdown_initiated-check
+        // cur_msg set to null 2x/s, to allow shutdown_initiated-check
         // construct chosen over "Poison"/End-Of-Stream msgs for a sort of congruency with AcceptThread
         // and to keep DMTP_Message Model simple.
         continue;

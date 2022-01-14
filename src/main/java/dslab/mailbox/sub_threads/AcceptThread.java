@@ -46,7 +46,7 @@ public class AcceptThread implements Runnable {
     }
 
     try {
-      this.serverSocket.setSoTimeout(1000);
+      this.serverSocket.setSoTimeout(500);
     } catch (SocketException e) {
       shutdown_initiated.set(true);
       throw new UncheckedIOException(
@@ -64,7 +64,7 @@ public class AcceptThread implements Runnable {
       try {
         incomingConn = serverSocket.accept();
       } catch (SocketTimeoutException timeout) {
-        // all ok, happens 1x/s to allow shutdown_initiated-check
+        // all ok, happens 2x/s to allow shutdown_initiated-check
         // (construct chosen over shutting down via socket-closing)
         continue;
       } catch (IOException e) {
