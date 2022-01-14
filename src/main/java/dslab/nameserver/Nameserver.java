@@ -44,9 +44,11 @@ public class Nameserver implements INameserver, INameserverRemote {
       this.domain = new String[0];
     }
 
-    this.registerSelf();
+
 
     shell = new Shell(in, out);
+    this.registerSelf();
+
     shell.register(this);
 
     // (prompt may not work correctly/nicely when application is run via ant)

@@ -4,6 +4,7 @@ import dslab.*;
 import dslab.client.IMessageClient;
 import dslab.mailbox.IMailboxServer;
 import dslab.mailbox.MailboxServerProtocolTest;
+import dslab.nameserver.INameserver;
 import dslab.util.Config;
 import dslab.util.Keys;
 import jdk.jfr.Description;
@@ -36,8 +37,43 @@ public class SecureDMAPTest extends TestBase {
     private int dmapServerPort;
     private int dmtpServerPort;
 
+    private TestInputStream nsRootIn;
+    private TestOutputStream nsRootOut;
+
+    private String nsPlanetComponentId = "ns-planet";
+    private String nsZeComponentId = "ns-ze";
+    private String nsRootComponentId = "ns-root";
+    private TestInputStream nsPlanetIn;
+    private TestOutputStream nsPlanetOut;
+
+    private TestInputStream nsZeIn;
+    private TestOutputStream nsZeOut;
+
+    private INameserver planet_nameserver;
+    private INameserver root_nameserver;
+    private INameserver ze_nameserver;
+
     @Before
     public void setUp() throws Exception {
+
+        this.nsRootIn = new TestInputStream();
+        this.nsPlanetIn = new TestInputStream();
+        this.nsRootOut = new TestOutputStream();
+        this.nsPlanetOut = new TestOutputStream();
+        this.nsZeIn = new TestInputStream();
+        this.nsZeOut = new TestOutputStream();
+
+        root_nameserver = ComponentFactory.createNameserver(nsRootComponentId, nsRootIn, nsRootOut);
+        planet_nameserver = ComponentFactory.createNameserver(nsPlanetComponentId, nsPlanetIn, nsPlanetOut);
+        ze_nameserver = ComponentFactory.createNameserver(nsZeComponentId, nsZeIn, nsZeOut);
+
+        new Thread(root_nameserver).start();
+        Thread.sleep(100);
+        new Thread(planet_nameserver).start();
+        Thread.sleep(100);
+        new Thread(ze_nameserver).start();
+        Thread.sleep(100);
+
         String componentId = "mailbox-earth-planet";
 
         IMailboxServer component = ComponentFactory.createMailboxServer(componentId, in, out);
@@ -55,6 +91,13 @@ public class SecureDMAPTest extends TestBase {
     public void tearDown() throws Exception {
         in.addLine("shutdown"); // send "shutdown" command to command line
         Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT);
+        nsPlanetIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/3);
+        nsRootIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/6);
+        nsZeIn.addLine("shutdown");
+        Thread.sleep(Constants.COMPONENT_TEARDOWN_WAIT/6);
+
     }
 
     @Test(timeout = 15000)

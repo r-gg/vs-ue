@@ -65,7 +65,6 @@ public class SystemProtocolsTest extends TestBase {
     private String nsPlanetComponentId = "ns-planet";
     private String nsZeComponentId = "ns-ze";
     private String nsRootComponentId = "ns-root";
-    private Config nsPlanetConfig;
     private TestInputStream nsPlanetIn;
     private TestOutputStream nsPlanetOut;
 
