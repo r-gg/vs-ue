@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -109,12 +110,23 @@ public class MailboxServer implements IMailboxServer, Runnable {
   }
 
   private void registerAtNS(){
+    final String err_msg = "Registration at nameserver failed: ";
     try {
       Registry registry = LocateRegistry.getRegistry(this.config.getString("registry.host"), this.config.getInt("registry.port"));
       INameserverRemote rootNameserver = (INameserverRemote) registry.lookup(this.config.getString("root_id"));
       rootNameserver.registerMailboxServer(this.domain, InetAddress.getLocalHost().getHostAddress()+":"+this.DMTP_port);
-    } catch (NotBoundException | RemoteException | AlreadyRegisteredException | InvalidDomainException | UnknownHostException e) {
-      e.printStackTrace();
+    } catch (AccessException e) {
+      shell.out().println(err_msg + "insufficient permissions:\n" + e.getMessage());
+    } catch (UnknownHostException unknownHostException) {
+      shell.out().println(err_msg + "could not obtain own local host address.");
+    } catch (NotBoundException e) {
+      shell.out().println(err_msg + "root nameserver wasn't found in registry");
+    } catch (AlreadyRegisteredException e) {
+      shell.out().println(err_msg + "mailbox server was already registered");
+    } catch (InvalidDomainException e) {
+      shell.out().println(err_msg + "nameserver claims the supplied domain was invalid:\n" + e.getMessage());
+    } catch (RemoteException e) {
+      shell.out().println(err_msg + "generic RemoteException:\n" + e.getMessage());
     }
   }
 
