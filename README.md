@@ -1,38 +1,22 @@
-# Meta Info
+# Secure Distributed Email Service with Java RMI
 
-## Assignment 2 Architecture and Questions
+Implements:
+ - Decentralized Naming Service
+ - Secure Mail Access and Mail Transfer Protocols
 
-### Secure Channel
-Do the chunks that are encrypted + decrypted need to be synchronized?
-i.e. is: (encrypt(line1) + encrypt(line2)) == encrypt(line1 + line2) ?
+## Decentralized naming service architecture and related workflow diagrams
 
-- For Base64 definitely not. I also checked for AES encryption and it is also non-additive. If we need to send more lines over the secure channel, they are combined into one string with '\n', then encrypted and sent as one message.
+![image](https://github.com/r-gg/vs-ue/assets/90387385/a2075479-8026-458e-b0a8-759ce6c34424)
 
-### Message Client
-Is any sort of reconnection-feature intended? Or can "Mailbox Server ends connection" directly lead to client aborting? 
+![image](https://github.com/r-gg/vs-ue/assets/90387385/31415ce4-3e60-4ac5-bd18-e57962ba8e58)
 
-## Notes on Concurrency and Synchronization "Architecture" (Assignment 1)
-TransferServer:
-- 1 AcceptThread
-  - n DMTP-Receive-Threads
-- 1 BlockingQueue
-- m TransferThreads
-- 1 Shell
+![image](https://github.com/r-gg/vs-ue/assets/90387385/488dccdb-31dd-401e-9a86-1618db7fa760)
 
-MailboxServer:
-- 1 DMTP-AcceptThread
-  - n DMTP-Receive-Threads
-- 1 DMAP-AcceptThread
-  - m DMAP-HandlerThreads
-- 1 ConcurrentHashMap<UserName, Pair<Password,Inbox>>
-  - Inbox w/ synchronized add(msg)/delete(i)/... methods
-- 1 Shell
+![image](https://github.com/r-gg/vs-ue/assets/90387385/90659c88-33b8-4d4d-b602-05857e02bc7d)
 
-MonitoringServer
-- 1 Shell
-- 1 ListenThread
+![image](https://github.com/r-gg/vs-ue/assets/90387385/11149a66-75fb-4cae-9078-9b7b5dc09734)
 
-## Using gradle
+## How to run (Gradle)
 
 ### Compile & Test
 Gradle is the build tool we are using. Here are some instructions:
